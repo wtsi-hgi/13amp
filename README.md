@@ -1,6 +1,6 @@
 # 13 Amp
 
-A userspace CRAM-to-BAM translation filesystem.
+A userspace CRAM-to-BAM translation virtual filesystem.
 
 # License
 

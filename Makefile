@@ -5,6 +5,15 @@ SRCDIR = $(CURDIR)/src
 INCDIR = $(CURDIR)/include
 OBJDIR = $(CURDIR)/obj
 BINDIR = $(CURDIR)/bin
+DBGDIR = $(CURDIR)/*.dSYM
+
+RM = rm -rf
+
+$(OBJDIR):
+	mkdir $@
+
+$(BINDIR):
+	mkdir $@
 
 ## Mac OS X Specific ###################################################
 ifeq ($(UNAME), Darwin)
@@ -19,8 +28,8 @@ ifeq ($(UNAME), Darwin)
 	OSXFUSE_CFLAGS += -D_FILE_OFFSET_BITS=64
 	OSXFUSE_CFLAGS += -D_DARWIN_USE_64_BIT_INODE
 
-	CFLAGS = $(OSXFUSE_CFLAGS)	
-	LIBS = -losxfuse
+	CFLAGS += $(OSXFUSE_CFLAGS)	
+	LIBS += -losxfuse
 
 	# GCC is usually symlinked to clang; for *real* GCC, install with,
 	# e.g., homebrew, and define as /usr/local/bin/gcc
@@ -37,14 +46,16 @@ ifdef SUPPORTED
 
 TARGETS = 13amp
 
-CFLAGS_EXTRA = -Wall -g
-CFLAGS += $(CFLAGS_EXTRA)
+INCLUDES += -I$(INCDIR)
 
-all:
+CFLAGS_EXTRA = -Wall -g
+CFLAGS += $(CFLAGS_EXTRA) $(INCLUDES)
+
+all: $(OBJDIR) $(BINDIR)
 	@echo "Not done yet..."
 
 clean:
-	@echo "Not done yet..."
+	$(RM) $(OBJDIR) $(BINDIR) $(DBGDIR)
 
 # Echo compiler and linker flags
 print_cflags:

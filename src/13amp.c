@@ -62,6 +62,6 @@ int cramp_options(void* data, const char* arg, int key, struct fuse_args* outarg
   /* TODO */
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   return 0;
 }

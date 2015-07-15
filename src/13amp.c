@@ -9,6 +9,7 @@
 #include <fuse.h>
 #include <fuse_opt.h>
 
+#include "13amp.h"
 #include "13amp_ops.h"
 
 /* FUSE Operations */

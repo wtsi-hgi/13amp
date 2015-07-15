@@ -21,9 +21,9 @@ void* cramp_init(struct fuse_conn_info* conn) {
   @brief   Get file attributes
   @param   path   File path
   @param   stbuf  ...
-  @return  ...
+  @return  Exit status (0 = OK; -errno = not so much)
 */
-int* cramp_getattr(const char* path, struct stat* stbuf) {
+int cramp_getattr(const char* path, struct stat* stbuf) {
   /* TODO */
 }
 
@@ -31,7 +31,7 @@ int* cramp_getattr(const char* path, struct stat* stbuf) {
   @brief   Open file
   @param   path  File path
   @param   fi    ...
-  @return  ...
+  @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
   /* TODO */
@@ -44,7 +44,7 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
   @param   size    ...
   @param   offset  ...
   @param   fi      ...
-  @return  ...
+  @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
   /* TODO */
@@ -57,7 +57,7 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
   @param   filler  ...
   @param   offset  ...
   @param   fi      ...
-  @return  ...
+  @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
   /* TODO */
@@ -67,7 +67,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   @brief   Release an open file
   @param   path  File path
   @param   fi    ...
-  @return  ...
+  @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_release(const char* path, struct fuse_file_info* fi) {
   /* TODO */

@@ -15,7 +15,7 @@
 
 /**
   @brief   Initialise filesystem
-  @param   conn  ...
+  @param   conn  FUSE connection info
   @return  ...
 */
 void* cramp_init(struct fuse_conn_info* conn) {
@@ -25,7 +25,7 @@ void* cramp_init(struct fuse_conn_info* conn) {
 /**
   @brief   Get file attributes
   @param   path   File path
-  @param   stbuf  ...
+  @param   stbuf  stat buffer
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
@@ -41,7 +41,7 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
 /**
   @brief   Open file
   @param   path  File path
-  @param   fi    ...
+  @param   fi    FUSE file info
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
@@ -58,10 +58,10 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
 /**
   @brief   Read data from an open file
   @param   path    File path
-  @param   buf     ...
-  @param   size    ...
-  @param   offset  ...
-  @param   fi      ...
+  @param   buf     Data buffer
+  @param   size    Data size (bytes)
+  @param   offset  Data offset (bytes)
+  @param   fi      FUSE file info
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
@@ -86,10 +86,10 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
 /**
   @brief   Read directory
   @param   path    File path
-  @param   buf     ...
-  @param   filler  ...
-  @param   offset  ...
-  @param   fi      ...
+  @param   buf     Data buffer
+  @param   filler  Function to add a readdir entry
+  @param   offset  Offset of next entry
+  @param   fi      FUSE file info
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
@@ -123,7 +123,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
 /**
   @brief   Release an open file
   @param   path  File path
-  @param   fi    ...
+  @param   fi    FUSE file info
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_release(const char* path, struct fuse_file_info* fi) {

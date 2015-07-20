@@ -1,6 +1,9 @@
 /* GPLv3 or later
  * Copyright (c) 2015 Genome Research Limited */
 
+/* FUSE operations derived from fusexmp.c
+ * Copyright (c) 2001-2007 Miklos Szeredi */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -10,6 +13,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
+
+#include "13amp.h"
 
 #include <fuse.h>
 
@@ -29,12 +34,20 @@ void* cramp_init(struct fuse_conn_info* conn) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
-  int res = lstat(path, stbuf);
+  cramp_fuse_t *cf = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  char* realpath;
+  if (asprintf(&realpath, "%s/%s", cf->conf->source, path) < 1) {
+    (void)fprintf(stderr, "mem fail");
+    abort();
+  }
+
+  int res = lstat(realpath, stbuf);
 
   if (res == -1) {
     return -errno;
   }
 
+  free(realpath);
   return 0;
 }
 
@@ -45,13 +58,24 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
-  int res = open(path, fi->flags);
+  cramp_fuse_t *cf = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  char* realpath;
+  if (asprintf(&realpath, "%s/%s", cf->conf->source, path) < 1) {
+    (void)fprintf(stderr, "mem fail");
+    abort();
+  }
+
+  (void)fprintf(stderr, "flags: 0x%x\n", fi->flags);
+
+  int res = open(realpath, fi->flags);
 
   if (res == -1) {
     return -errno;
+  } else {
+    fi->fh = res;
   }
 
-  close(res);
+  free(realpath);
   return 0;
 }
 
@@ -65,21 +89,37 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+  /*
+  cramp_fuse_t *cf = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  char* realpath;
+  if (asprintf(&realpath, "%s/%s", cf->conf->source, path) < 1) {
+    (void)fprintf(stderr, "mem fail");
+    abort();
+  }
+
   int fd, res;
 
   (void)fi;
-
-  fd = open(path, O_RDONLY);
+  
+  fd = open(realpath, O_RDONLY);
   if (fd == -1) {
     return -errno;
   }
+  */
 
-  res = pread(fd, bug, size, offset);
+  int res;
+  
+  /* TODO uint */
+  if (fi->fh < 0) {
+    return -EBADF;
+  }
+
+  res = pread(fi->fh, buf, size, offset);
   if (res == -1) {
     return -errno;
   }
 
-  close(fd);
+  //free(realpath);
   return res;
 }
 
@@ -93,13 +133,21 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
+  cramp_fuse_t *cf = (cramp_fuse_t*)(fuse_get_context()->private_data);
+
   DIR* dp;
   struct dirent* de;
 
   (void)offset;
   (void)fi;
 
-  dp = opendir(path);
+  char* realpath;
+  if (asprintf(&realpath, "%s/%s", cf->conf->source, path) < 1) {
+    (void)fprintf(stderr, "mem fail");
+    abort();
+  }
+
+  dp = opendir(realpath);
   if (dp == NULL) {
     return -errno;
   }
@@ -117,6 +165,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   }
 
   closedir(dp);
+  free(realpath);
   return 0;
 }
 
@@ -127,10 +176,17 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_release(const char* path, struct fuse_file_info* fi) {
-  /* XXX Does this need to be implemented? */
   (void)path;
-  (void)fi;
-  return 0;
+  // (void)fi;
+
+  /* TODO uint */
+  if (fi->fh < 0) {
+    return -EBADF;
+  }
+
+  return close(fi->fh);
+
+//  return 0;
 }
 
 /**

@@ -1,75 +1,115 @@
-# I don't like autotools...
-UNAME := $(shell uname -s)
+TARGETS = bin/13amp 
+OSXFUSE_ROOT = /usr/local
 
-SRCDIR = $(CURDIR)/src
-INCDIR = $(CURDIR)/include
-OBJDIR = $(CURDIR)/obj
-BINDIR = $(CURDIR)/bin
-DBGDIR = $(CURDIR)/*.dSYM
+INCLUDE_DIR  = $(OSXFUSE_ROOT)/include/osxfuse/fuse
+LIBRARY_DIR  = $(OSXFUSE_ROOT)/lib
 
-RM = rm -rf
+CC = gcc # Symlinked to clang
+# CC = /usr/local/bin/gcc-5 # Actual GCC
 
-$(OBJDIR):
-	mkdir $@
+CFLAGS_OSXFUSE = -I$(INCLUDE_DIR) -L$(LIBRARY_DIR)
+CFLAGS_OSXFUSE += -D_FILE_OFFSET_BITS=64
+CFLAGS_OSXFUSE += -D_DARWIN_USE_64_BIT_INODE
 
-$(BINDIR):
-	mkdir $@
+CFLAGS_EXTRA = -Wall -g $(CFLAGS)
 
-## Mac OS X Specific ###################################################
-ifeq ($(UNAME), Darwin)
-	SUPPORTED = 1
+CFLAGS += -Iinclude/
 
-	OSXFUSE_ROOT = /usr/local
-	
-	OSXFUSE_INCDIR = $(OSXFUSE_ROOT)/include/osxfuse/fuse
-	OSXFUSE_LIBDIR = $(OSXFUSE_ROOT)/lib
-	
-	OSXFUSE_CFLAGS = -I$(OSXFUSE_INCDIR) -L$(OSXFUSE_LIBDIR)
-	OSXFUSE_CFLAGS += -D_FILE_OFFSET_BITS=64
-	OSXFUSE_CFLAGS += -D_DARWIN_USE_64_BIT_INODE
+LIBS = -losxfuse
 
-	CFLAGS += $(OSXFUSE_CFLAGS)	
-	LIBS += -losxfuse
+bin/13amp: src/13amp.c src/13amp_ops.c
+	$(CC) $(CFLAGS_OSXFUSE) $(CFLAGS_EXTRA) $(CFLAGS) -o $@ $+  $(LIBS)
 
-	# GCC is usually symlinked to clang; for *real* GCC, install with,
-	# e.g., homebrew, and define as /usr/local/bin/gcc
-	CC = gcc
-endif
+all: $(TARGETS)
 
-## Linux Specific ######################################################
-ifeq ($(UNAME), Linux)
-	SUPPORTED = 1
-endif
-
-## Universal Build Rules ###############################################
-ifdef SUPPORTED
-
-TARGETS = 13amp
-
-INCLUDES += -I$(INCDIR)
-
-CFLAGS_EXTRA = -Wall -g
-CFLAGS += $(CFLAGS_EXTRA) $(INCLUDES)
-
-all: $(OBJDIR) $(BINDIR)
-	@echo "Not done yet..."
 
 clean:
-	$(RM) $(OBJDIR) $(BINDIR) $(DBGDIR)
+	rm -f $(TARGETS) *.o
+	rm -rf *.dSYM
 
-# Echo compiler and linker flags
-print_cflags:
-	@echo "Compiler flags: $(CFLAGS)"
-
-print_ldflags:
-	@echo "Linker flags: $(LDFLAGS)"
-
-# Uh oh...
-else
-
-all:
-	@>&2 echo "Unsupported platform: $(UNAME)" && exit 1
-
-endif
-
-.PHONY: all clean print_cflags print_ldflags
+## # I don't like autotools...
+## UNAME := $(shell uname -s)
+## 
+## SRCDIR = $(CURDIR)/src
+## INCDIR = $(CURDIR)/include
+## OBJDIR = $(CURDIR)/obj
+## BINDIR = $(CURDIR)/bin
+## DBGDIR = $(CURDIR)/*.dSYM
+## 
+## RM = rm -rf
+## 
+## $(OBJDIR):
+## 	mkdir $@
+## 
+## $(BINDIR):
+## 	mkdir $@
+## 
+## ## Mac OS X Specific ###################################################
+## ifeq ($(UNAME), Darwin)
+## 	SUPPORTED = 1
+## 
+## 	OSXFUSE_ROOT = /usr/local
+## 	
+## 	OSXFUSE_INCDIR = $(OSXFUSE_ROOT)/include/osxfuse/fuse
+## 	OSXFUSE_LIBDIR = $(OSXFUSE_ROOT)/lib
+## 	
+## 	OSXFUSE_CFLAGS = -I$(OSXFUSE_INCDIR) -L$(OSXFUSE_LIBDIR)
+## 	OSXFUSE_CFLAGS += -D_FILE_OFFSET_BITS=64
+## 	OSXFUSE_CFLAGS += -D_DARWIN_USE_64_BIT_INODE
+## 
+## 	CFLAGS += $(OSXFUSE_CFLAGS)	
+## 	LIBS += -losxfuse
+## 
+## 	# GCC is usually symlinked to clang; for *real* GCC, install with,
+## 	# e.g., homebrew, and define as /usr/local/bin/gcc
+## 	CC = gcc
+## endif
+## 
+## ## Linux Specific ######################################################
+## ifeq ($(UNAME), Linux)
+## 	SUPPORTED = 1
+## endif
+## 
+## ## Universal Build Rules ###############################################
+## ifdef SUPPORTED
+## 
+## TARGETS = 13amp
+## 
+## BINS = $(BINDIR)/13amp
+## OBJS = $(OBJDIR)/13amp.o
+## 
+## LIBOBJS = $(OBJDIR)/13amp_ops.o
+## 
+## INCLUDES += -I$(INCDIR)
+## 
+## CFLAGS_EXTRA = -Wall -g
+## CFLAGS += $(CFLAGS_EXTRA) $(INCLUDES)
+## 
+## all: $(LIBOBJS) $(OBJS) $(BINS)
+## 	@true
+## 
+## $(OBJDIR)/%.o: $(SRCDIR)/%.c
+## 	$(CC) -c $(CFLAGS) -o $@ $<
+## 
+## $(BINDIR)/%: $(OBJDIR)/%.o $(LIBOBJS)
+## 	$(LDR) -o $@ $< $(LIBOBJS) $(LDFLAGS)
+## 
+## clean:
+## 	$(RM) $(OBJDIR) $(BINDIR) $(DBGDIR)
+## 
+## # Echo compiler and linker flags
+## print_cflags:
+## 	@echo "Compiler flags: $(CFLAGS)"
+## 
+## print_ldflags:
+## 	@echo "Linker flags: $(LDR) $(LDFLAGS)"
+## 
+## # Uh oh...
+## else
+## 
+## all:
+## 	@>&2 echo "Unsupported platform: $(UNAME)" && exit 1
+## 
+## endif
+## 
+## .PHONY: all clean print_cflags print_ldflags

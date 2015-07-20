@@ -73,3 +73,40 @@ Session.vim
 
 # Debug files
 *.dSYM/
+
+# Editor backup files
+*~
+
+# http://www.gnu.org/software/automake
+Makefile.in
+Makefile
+
+# http://www.gnu.org/software/autoconf
+/autom4te.cache
+/aclocal.m4
+/compile
+/configure
+/depcomp
+/install-sh
+/missing
+/m4
+/INSTALL
+/build-aux
+/config.log
+/config.status
+/gnulib/
+/gl/
+/libtool
+/stamp-h1
+/src/.deps/
+
+# Generated files
+/test/vars
+/config.h.in
+/config.h
+.tar.bz2
+.tar.gz
+/.version
+
+# suggest building in /build rather than in source tree
+/build

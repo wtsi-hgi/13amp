@@ -1,10 +1,27 @@
 /* GPLv3 or later
  * Copyright (c) 2015 Genome Research Limited */
 
-#include <stdio.h>
+#include "config.h"
+
 #include <stdlib.h>
+
+/* gnulib suggested includes */
 #include <errno.h>
+#include <getopt.h>
+#include <locale.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+#include <strings.h>
+#include "error.h"
+#include "gl_avltreehash_list.h"
+#include "gl_xlist.h"
+#include "hash-pjw.h"
+#include "progname.h"
+#include "size_max.h"
+#include "version-etc.h"
+#include "xalloc.h"
+#include "xstrndup.h"
 
 #include "13amp.h"
 #include "13amp_ops.h"

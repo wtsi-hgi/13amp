@@ -4,15 +4,31 @@
 /* FUSE operations derived from fusexmp.c
  * Copyright (c) 2001-2007 Miklos Szeredi */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
+#include "config.h"
 
-#include <sys/stat.h>
+#include <stdlib.h>
+
+/* gnulib suggested includes */
+#include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
+#include <locale.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/stat.h>
 #include <unistd.h>
-#include <dirent.h>
+#include "error.h"
+#include "dirent-safer.h"
+#include "gl_avltreehash_list.h"
+#include "gl_xlist.h"
+#include "hash-pjw.h"
+#include "progname.h"
+#include "size_max.h"
+#include "version-etc.h"
+#include "xalloc.h"
+#include "xstrndup.h"
 
 #include "13amp.h"
 

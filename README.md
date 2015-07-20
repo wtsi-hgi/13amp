@@ -2,6 +2,16 @@
 
 A userspace CRAM-to-BAM translation virtual filesystem.
 
+# Quick compile / install (for those with pkg-config)
+
+1. Set `PKG_CONFIG_PATH` appropriately
+
+2. If cloned from git repository, run `./autogen.sh`
+
+3. Run configure (setting `--prefix` appropraitely - in this case installing into `~/local`): `./configure HTSLIB_LDFLAGS="$(pkg-config --libs htslib)" HTSLIB_CFLAGS="$(pkg-config --cflags htslib)" FUSE_LDFLAGS="$(pkg-config --libs fuse)" FUSE_CFLAGS="$(pkg-config --cflags fuse)" --prefix=$(echo ~/local)`
+
+4. Run make install: `make install`
+
 # License
 
 Copyright (c) 2015 Genome Research Limited

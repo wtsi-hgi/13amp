@@ -1,5 +1,6 @@
 # Custom
 .plan
+build
 
 
 # Created by https://www.gitignore.io
@@ -10,7 +11,8 @@
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
@@ -74,14 +76,14 @@ Session.vim
 # Debug files
 *.dSYM/
 
-# Editor backup files
-*~
 
+### Autotools ###
 # http://www.gnu.org/software/automake
+
 Makefile.in
-Makefile
 
 # http://www.gnu.org/software/autoconf
+
 /autom4te.cache
 /aclocal.m4
 /compile
@@ -89,24 +91,19 @@ Makefile
 /depcomp
 /install-sh
 /missing
-/m4
-/INSTALL
-/build-aux
-/config.log
-/config.status
-/gnulib/
-/gl/
-/libtool
 /stamp-h1
-/src/.deps/
+/m4
 
-# Generated files
+
+### GNU Lib ###
+/gnulib
+/gl
+
+
+### Other generated files ###
 /test/vars
 /config.h.in
 /config.h
+/.version
 .tar.bz2
 .tar.gz
-/.version
-
-# suggest building in /build rather than in source tree
-/build

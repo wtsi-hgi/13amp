@@ -24,7 +24,7 @@ Development Plan/Progress
       [X]  Don't need reference
     [X]  Global context
     [X]  General tidy
-  [ ]  Debugging / Logging
+  [X]  Debugging / Logging
   [ ]  FUSE operations
     [ ]  FUSE file information struct
     [ ]  Ignore mount directory if recursive

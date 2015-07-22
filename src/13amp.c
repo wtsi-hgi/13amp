@@ -25,6 +25,7 @@
 
 #include "13amp.h"
 #include "13amp_ops.h"
+#include "13amp_log.h"
 
 #include <fuse.h>
 #include <fuse_opt.h>
@@ -47,7 +48,7 @@ static struct fuse_operations cramp_ops = {
 
 /* FUSE Options */
 static struct fuse_opt cramp_fuse_opts[] = {
-  CRAMP_FUSE_OPT("-s %s",        source, 0),
+  CRAMP_FUSE_OPT("-S %s",        source, 0),
   CRAMP_FUSE_OPT("--source=%s",  source, 0),
   CRAMP_FUSE_OPT("source=%s",    source, 0),
 
@@ -84,7 +85,7 @@ void usage(char* me) {
     "Usage: %s mountpoint [options]\n"
     "\n"
     "Options:\n"
-    "  -s   --source   [DIR | URI]  Source directory (defaults to the PWD)\n"
+    "  -S   --source   [DIR | URI]  Source directory (defaults to the PWD)\n"
     "  -V   --version               Print version\n"
     "  -h   --help                  This helpful text\n"
     "\n"
@@ -179,7 +180,15 @@ int main(int argc, char** argv) {
     strncpy(ctx->conf->source, CRAMP_DEFAULT_SOURCE, bufsize);
   }
 
-  /* TODO Debug logging */
-  (void)fprintf(stderr, "source: %s\n", ctx->conf->source);
+  /* Log configuration */
+  (void)cramp_log(ctx, "Source directory: %s",
+                       ctx->conf->source);
+
+  (void)cramp_log(ctx, "Debug level: %d",
+                       ctx->conf->debug_level);
+
+  (void)cramp_log(ctx, "Single threaded: %s",
+                       ctx->conf->one_thread ? "yes" : "no");
+
   return fuse_main(args.argc, args.argv, &cramp_ops, &cramp_fuse);
 }

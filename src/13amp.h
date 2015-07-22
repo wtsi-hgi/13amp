@@ -10,10 +10,6 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
-/* Debug level flags (additive) */
-#define DEBUG_FUSE (1 << 0)
-#define DEBUG_ME   (1 << 1)
-
 /* Default source directory */
 #define CRAMP_DEFAULT_SOURCE "."
 

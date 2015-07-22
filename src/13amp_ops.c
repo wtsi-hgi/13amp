@@ -31,6 +31,7 @@
 #include "xstrndup.h"
 
 #include "13amp.h"
+#include "13amp_log.h"
 
 #include <fuse.h>
 

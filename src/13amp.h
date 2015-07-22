@@ -10,9 +10,6 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
-/* Default source directory */
-#define CRAMP_DEFAULT_SOURCE "."
-
 #define CRAMP_FUSE_OPT(t, p, v) { t, offsetof(cramp_fuse_conf_t, p), v }
 
 /* Option keys for FUSE */

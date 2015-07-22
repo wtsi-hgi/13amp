@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "error.h"
 #include "gl_avltreehash_list.h"
 #include "gl_xlist.h"
@@ -21,6 +24,7 @@
 #include "size_max.h"
 #include "version-etc.h"
 #include "xalloc.h"
+#include "xgetcwd.h"
 #include "xstrndup.h"
 
 #include "13amp.h"
@@ -169,16 +173,34 @@ int main(int argc, char** argv) {
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
   (void)fuse_opt_parse(&args, &cramp_fuse_conf, cramp_fuse_opts, cramp_fuse_options);
 
-  /* Defaults */
-  /* TODO Tidy and fix */
+
+  /* Sanitise source directory */
   if (ctx->conf->source == NULL) {
-    int bufsize = strlen(CRAMP_DEFAULT_SOURCE)+1;
-    ctx->conf->source = malloc(bufsize);
-    if(ctx->conf->source == NULL) {
-      (void)fprintf(stderr, "main: malloc(%d) setting default for ctx->conf->source\n", bufsize);
-      exit(2);
+    /* Default to current working dir */
+    ctx->conf->source = xgetcwd();
+
+  } else {
+    /* Check path exists as a directory */
+    struct stat s;
+    int ret = lstat(ctx->conf->source, &s);
+
+    if (ret == -1) {
+      if (errno == ENOENT) {
+        (void)fprintf(stderr, "FATAL: \"%s\" does not exist\n",
+                              ctx->conf->source);
+      } else {
+        (void)fprintf(stderr, "FATAL: Couldn't stat \"%s\"\n",
+                              ctx->conf->source);
+      }
+      exit(1);
+
+    } else {
+      if (!S_ISDIR(s.st_mode)) {
+        (void)fprintf(stderr, "FATAL: \"%s\" is not a directory\n",
+                              ctx->conf->source);
+        exit(1);
+      }
     }
-    strncpy(ctx->conf->source, CRAMP_DEFAULT_SOURCE, bufsize);
   }
 
   /* Log configuration */

@@ -1,0 +1,42 @@
+Development Plan/Progress
+-------------------------
+
+[X]  Passthrough, readonly VFS
+  [X]  Source
+    [X]  Option parsing
+    [X]  FUSE operations
+      [-]  init
+      [X]  getattr
+      [X]  open
+      [X]  read
+      [X]  readdir
+      [X]  release
+      [-]  destroy
+  [X]  Build chain
+    [X]  Makefile
+[ ]  Iteration/Refactor 1
+  [X]  Autotools for build
+    [X]  HTSLib dependency
+    [X]  GNULib dependency
+    [X]  FUSE dependency
+  [X]  Refactor
+    [X]  Option parsing
+      [X]  Don't need reference
+    [X]  Global context
+    [X]  General tidy
+  [ ]  Debugging / Logging
+  [ ]  FUSE operations
+    [ ]  FUSE file information struct
+    [ ]  Ignore mount directory if recursive
+    [ ]  CRAM identification and virtual BAM injection
+      [ ]  opendir / readdir / releasedir (by extension)
+      [ ]  open / read (by magic)
+    [ ]  init
+    [ ]  destroy
+  [ ]  Bugs / Warnings
+    [ ]  Default source to pwd
+  [ ]  ...
+[ ]  CRAM-to-BAM conversion (linear seek)
+  [ ]  ...
+[ ]  Iteration/Refactor 2
+[ ]  ...

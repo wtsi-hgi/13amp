@@ -28,7 +28,9 @@
 
 #include <fuse.h>
 #include <fuse_opt.h>
+#include <fuse_common.h>
 
+#include <htslib/hts.h>
 
 /* FUSE Operations */
 static struct fuse_operations cramp_ops = {
@@ -36,33 +38,29 @@ static struct fuse_operations cramp_ops = {
   .getattr = cramp_getattr,
   .open    = cramp_open,
   .read    = cramp_read,
-  .readdir = cramp_readdir,
   .release = cramp_release,
+  /* .opendir = cramp_opendir, */
+  .readdir = cramp_readdir,
+  /* .releasedir = cramp_releasedir, */
   /* .destroy = cramp_destroy */
 };
 
 /* FUSE Options */
 static struct fuse_opt cramp_fuse_opts[] = {
-  /* TODO */
-  CRAMP_FUSE_OPT("-s %s",       source, 0),
-  CRAMP_FUSE_OPT("--source %s", source, 0),
-  CRAMP_FUSE_OPT("source=%s",   source, 0),
+  CRAMP_FUSE_OPT("-s %s",        source, 0),
+  CRAMP_FUSE_OPT("--source=%s",  source, 0),
+  CRAMP_FUSE_OPT("source=%s",    source, 0),
 
-  CRAMP_FUSE_OPT("-r %s",       ref,    0),
-  CRAMP_FUSE_OPT("--ref %s",    ref,    0),
-  CRAMP_FUSE_OPT("ref=%s",      ref,    0),
-  
-  FUSE_OPT_KEY("--debug",        CRAMP_FUSE_CONF_KEY_DEBUG_ME), /* the --debug option is only recongnised by iquestFuse, not FUSE itself */
-  FUSE_OPT_KEY("--debug-trace",  CRAMP_FUSE_CONF_KEY_TRACE_ME), 
+  FUSE_OPT_KEY("--debug",        CRAMP_FUSE_CONF_KEY_DEBUG_ME),
+
+  FUSE_OPT_KEY("-d",             CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
+  FUSE_OPT_KEY("debug",          CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
 
   FUSE_OPT_KEY("-V",             CRAMP_FUSE_CONF_KEY_VERSION),
   FUSE_OPT_KEY("--version",      CRAMP_FUSE_CONF_KEY_VERSION),
 
   FUSE_OPT_KEY("-h",             CRAMP_FUSE_CONF_KEY_HELP),
   FUSE_OPT_KEY("--help",         CRAMP_FUSE_CONF_KEY_HELP),
-
-  FUSE_OPT_KEY("-d",             CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
-  FUSE_OPT_KEY("debug",          CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
 
   FUSE_OPT_KEY("-f",             CRAMP_FUSE_CONF_KEY_FOREGROUND),
 
@@ -76,21 +74,27 @@ static struct fuse_opt cramp_fuse_opts[] = {
   @param  me  Program name (i.e., argv[0])
 */
 void usage(char* me) {
+  /* Secret options!
+       -d       Full debugging messages
+       --debug  Just 13 Amp debugging messages (i.e., no FUSE)
+       -f       Run in foreground
+       -s       Run single threaded                                   */
+
   (void)fprintf(stderr,
     "Usage: %s mountpoint [options]\n"
     "\n"
     "Options:\n"
-    "  -s | --source DIR|URI  Source directory (default .)\n"
-    "  -r | --ref FILE        FASTA reference file\n"
-    "  -V | --version         Print version\n"
-    "  -h | --help            This helpful text\n"
+    "  -s   --source   [DIR | URI]  Source directory (defaults to the PWD)\n"
+    "  -V   --version               Print version\n"
+    "  -h   --help                  This helpful text\n"
     "\n"
-    "Note: The search order for the reference file is:\n"
-    "* As specified within the -T options;\n"
-    "* Via the REF_CACHE environment variable;\n"
-    "* Via the REF_PATH environment variable;\n"
-    "* As specified in the UR header tag.\n"
-    "\n",
+    "The source directory and reference file may also be provided as mount\n"
+    "options (e.g., in your fstab).\n"
+    "\n"
+    "Note: The search order for CRAM reference files is:\n"
+    " * Per the REF_CACHE environment variable;\n"
+    " * Per the REF_PATH environment variable;\n"
+    " * As specified in the CRAM's UR header tag.\n",
   me);
 }
 
@@ -102,72 +106,80 @@ void usage(char* me) {
   @param   outargs  ...
   @return  ...
 */
-int cramp_options(void* data, const char* arg, int key, struct fuse_args* outargs) {
-  (void)fprintf(stderr, "13amp: arg=%s key=%d\n", arg, key);
+int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_args* outargs) {
   cramp_fuse_conf_t *conf = data;
 
   switch(key) {
-  case CRAMP_FUSE_CONF_KEY_HELP:
-    usage(outargs->argv[0]);
-        fuse_opt_add_arg(outargs, "-ho"); /* ask fuse to print help without header */
-    fuse_main(outargs->argc, outargs->argv, &cramp_ops, NULL);
-    exit(1);
-  case CRAMP_FUSE_CONF_KEY_VERSION:
-    fprintf(stderr, "13amp version %s\n", PACKAGE_VERSION);
-    fuse_opt_add_arg(outargs, "--version"); /* pass this along to FUSE for their version */
-    fuse_main(outargs->argc, outargs->argv, &cramp_ops, NULL);
-    exit(0);
-  case CRAMP_FUSE_CONF_KEY_DEBUG_ME:
-    conf->debug_level = LOG_DEBUG;
-    fuse_opt_add_arg(outargs, "-f"); /* ask fuse to stay in foreground */
-    break;
-  case CRAMP_FUSE_CONF_KEY_TRACE_ME:
-    conf->debug_level = LOG_DEBUG1;
-    fuse_opt_add_arg(outargs, "-f"); /* ask fuse to stay in foreground */
-    break;
-  case CRAMP_FUSE_CONF_KEY_DEBUG_ALL:
-    conf->debug_level = LOG_DEBUG;
-    /* fall through as DEBUG implies FOREGROUND */
-  case CRAMP_FUSE_CONF_KEY_FOREGROUND:
-    /* could set foreground operation flag if we care */
-    return 1; /* -d and -f need to be processed by FUSE */
-  case CRAMP_FUSE_CONF_KEY_SINGLETHREAD:
-    //TODO disable pthreads here???
-    return 1; /* -s needs to be processed by FUSE */
- default:
-   return 1; /* anything not recognised should be processed by FUSE */
+    case CRAMP_FUSE_CONF_KEY_HELP:
+      usage(outargs->argv[0]);
+      exit(1);
+
+    case CRAMP_FUSE_CONF_KEY_VERSION:
+      /* Show version information 
+         n.b., fuse_version() returns an integer: (maj * 10) + min */
+      (void)fprintf(stderr,
+        "13 Amp %s\n"
+        " * HTSLib %s\n"
+        " * FUSE %d\n",
+      PACKAGE_VERSION, hts_version(), fuse_version());
+      exit(0);
+
+    case CRAMP_FUSE_CONF_KEY_DEBUG_ALL:
+      conf->debug_level |= DEBUG_FUSE;
+      /* Fall through: debug all => debug me */
+
+    case CRAMP_FUSE_CONF_KEY_DEBUG_ME:
+      conf->debug_level |= DEBUG_ME;
+      /* Fall through: debug me => foreground */
+
+    case CRAMP_FUSE_CONF_KEY_FOREGROUND:
+      /* -d and -f need to be processed by FUSE */
+      return 1;
+
+    case CRAMP_FUSE_CONF_KEY_SINGLETHREAD:
+      conf->one_thread = 1;
+      /* -s needs to be processed by FUSE */
+      return 1;
+
+    default:
+      /* Anything not recognised should be processed by FUSE */
+      return 1;
   }
-  /* anything that breaks out of the switch will NOT be processed by FUSE */
+
+  /* Anything that breaks out will not be processed by FUSE */
   return 0;
 }
 
 int main(int argc, char** argv) {
+  /* Initialise global context */
   static cramp_fuse_t cramp_fuse;
   memset(&cramp_fuse, 0, sizeof(cramp_fuse));
 
+  /* Initialise settings */
   static cramp_fuse_conf_t cramp_fuse_conf;
   memset(&cramp_fuse_conf, 0, sizeof(cramp_fuse_conf));
   cramp_fuse.conf = &cramp_fuse_conf;
 
-  cramp_fuse_t* cf = &cramp_fuse;
+  /* Pointer to context */
+  cramp_fuse_t* ctx = &cramp_fuse;
 
+  /* Parse command line arguments via FUSE */
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+  (void)fuse_opt_parse(&args, &cramp_fuse_conf, cramp_fuse_opts, cramp_fuse_options);
 
   /* Defaults */
-  if (cf->conf->source == NULL) {
+  /* TODO Tidy and fix */
+  if (ctx->conf->source == NULL) {
     int bufsize = strlen(CRAMP_DEFAULT_SOURCE)+1;
-    cf->conf->source = malloc(bufsize);
-    if(cf->conf->source == NULL) {
-      fprintf(stderr, "main: malloc(%d) setting default for cf->conf->source\n", bufsize);
+    ctx->conf->source = malloc(bufsize);
+    if(ctx->conf->source == NULL) {
+      (void)fprintf(stderr, "main: malloc(%d) setting default for ctx->conf->source\n", bufsize);
       exit(2);
     }
-    strncpy(cf->conf->source, CRAMP_DEFAULT_SOURCE, bufsize);
+    strncpy(ctx->conf->source, CRAMP_DEFAULT_SOURCE, bufsize);
   }
 
-  fuse_opt_parse(&args, &cramp_fuse_conf, cramp_fuse_opts, cramp_options);
-
   /* TODO Debug logging */
-  (void)fprintf(stderr, "source: %s\n", cf->conf->source);
-  (void)fprintf(stderr, "ref: %s\n", cf->conf->ref);
+  (void)fprintf(stderr, "source: %s\n", ctx->conf->source);
   return fuse_main(args.argc, args.argv, &cramp_ops, &cramp_fuse);
 }

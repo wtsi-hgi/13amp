@@ -50,9 +50,9 @@ void* cramp_init(struct fuse_conn_info* conn) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
-  cramp_fuse_t *cf = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  cramp_fuse_t *ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
   char* realpath;
-  if (asprintf(&realpath, "%s/%s", cf->conf->source, path) < 1) {
+  if (asprintf(&realpath, "%s/%s", ctx->conf->source, path) < 1) {
     (void)fprintf(stderr, "mem fail");
     abort();
   }
@@ -74,9 +74,9 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
-  cramp_fuse_t *cf = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  cramp_fuse_t *ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
   char* realpath;
-  if (asprintf(&realpath, "%s/%s", cf->conf->source, path) < 1) {
+  if (asprintf(&realpath, "%s/%s", ctx->conf->source, path) < 1) {
     (void)fprintf(stderr, "mem fail");
     abort();
   }
@@ -105,24 +105,6 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
-  /*
-  cramp_fuse_t *cf = (cramp_fuse_t*)(fuse_get_context()->private_data);
-  char* realpath;
-  if (asprintf(&realpath, "%s/%s", cf->conf->source, path) < 1) {
-    (void)fprintf(stderr, "mem fail");
-    abort();
-  }
-
-  int fd, res;
-
-  (void)fi;
-  
-  fd = open(realpath, O_RDONLY);
-  if (fd == -1) {
-    return -errno;
-  }
-  */
-
   int res;
   
   /* TODO uint */
@@ -135,8 +117,34 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
     return -errno;
   }
 
-  //free(realpath);
   return res;
+}
+
+/**
+  @brief   Release an open file
+  @param   path  File path
+  @param   fi    FUSE file info
+  @return  Exit status (0 = OK; -errno = not so much)
+*/
+int cramp_release(const char* path, struct fuse_file_info* fi) {
+  (void)path;
+
+  /* TODO uint */
+  if (fi->fh == 0) {
+    return -EBADF;
+  }
+
+  return close(fi->fh);
+}
+
+/**
+  @brief   Open directory
+  @param   path  File path
+  @param   fi    FUSE file info
+  @return  Exit status (0 = OK; -errno = not so much)
+*/
+int cramp_opendir(const char* path, struct fuse_file_info* fi) {
+  /* TODO */
 }
 
 /**
@@ -149,7 +157,7 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
-  cramp_fuse_t *cf = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  cramp_fuse_t *ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
 
   DIR* dp;
   struct dirent* de;
@@ -158,7 +166,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   (void)fi;
 
   char* realpath;
-  if (asprintf(&realpath, "%s/%s", cf->conf->source, path) < 1) {
+  if (asprintf(&realpath, "%s/%s", ctx->conf->source, path) < 1) {
     (void)fprintf(stderr, "mem fail");
     abort();
   }
@@ -186,23 +194,13 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
 }
 
 /**
-  @brief   Release an open file
+  @brief   Release an open directory
   @param   path  File path
   @param   fi    FUSE file info
   @return  Exit status (0 = OK; -errno = not so much)
 */
-int cramp_release(const char* path, struct fuse_file_info* fi) {
-  (void)path;
-  // (void)fi;
-
-  /* TODO uint */
-  if (fi->fh < 0) {
-    return -EBADF;
-  }
-
-  return close(fi->fh);
-
-//  return 0;
+int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
+  /* TODO */
 }
 
 /**

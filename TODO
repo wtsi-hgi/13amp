@@ -29,6 +29,9 @@ Development Plan/Progress
     [ ]  FUSE file information struct
     [ ]  Ignore mount directory if recursive
     [ ]  CRAM identification and virtual BAM injection
+      [ ]  CRAM checking
+        [X]  by extension
+        [ ]  by magic
       [ ]  opendir / readdir / releasedir (by extension)
       [ ]  open / read (by magic)
     [ ]  init

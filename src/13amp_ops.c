@@ -36,6 +36,32 @@
 #include <fuse.h>
 
 /**
+  @brief   Check file extension for .cram
+  @param   path  File path
+  @return  1 = Yep; 0 = Nope
+
+  This is nothing more than a simple string comparison
+*/
+static int possibly_cram(const char* path) {
+  size_t len = strlen(path);
+
+  if (len < 5) {
+    return 0;
+  }
+
+  return strcmp(path + len - 5, ".cram") == 0;
+}
+
+/**
+  @brief   Check file is a CRAM using HTSLib
+  @param   path  File path
+  @return  1 = Yep; 0 = Nope
+*/
+static int actually_cram(const char* path) {
+  /* TODO */
+}
+
+/**
   @brief   Initialise filesystem
   @param   conn  FUSE connection info
   @return  ...

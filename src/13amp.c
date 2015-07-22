@@ -160,7 +160,6 @@ int main(int argc, char** argv) {
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
   (void)fuse_opt_parse(&args, &cramp_fuse_conf, cramp_fuse_opts, cramp_fuse_options);
 
-
   /* Sanitise source directory */
   if (ctx->conf->source == NULL) {
     /* Default to current working dir */

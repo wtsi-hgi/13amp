@@ -3,29 +3,14 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-
-/* gnulib suggested includes */
 #include <errno.h>
-#include <getopt.h>
-#include <locale.h>
-#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "error.h"
-#include "gl_avltreehash_list.h"
-#include "gl_xlist.h"
-#include "hash-pjw.h"
-#include "progname.h"
-#include "size_max.h"
-#include "version-etc.h"
-#include "xalloc.h"
 #include "xgetcwd.h"
-#include "xstrndup.h"
 
 #include "13amp.h"
 #include "13amp_ops.h"

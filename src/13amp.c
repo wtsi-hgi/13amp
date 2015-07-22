@@ -115,13 +115,15 @@ int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_args* o
       PACKAGE_VERSION, hts_version(), fuse_version());
       exit(0);
 
-    case CRAMP_FUSE_CONF_KEY_DEBUG_ALL:
-      conf->debug_level |= DEBUG_FUSE;
-      /* Fall through: debug all => debug me */
-
     case CRAMP_FUSE_CONF_KEY_DEBUG_ME:
       conf->debug_level |= DEBUG_ME;
-      /* Fall through: debug me => foreground */
+      /* Any debugging => foreground */
+      (void)fuse_opt_add_arg(outargs, "-f");
+      break;
+
+    case CRAMP_FUSE_CONF_KEY_DEBUG_ALL:
+      conf->debug_level |= DEBUG_FUSE;
+      /* Fall through: debug all => foreground */
 
     case CRAMP_FUSE_CONF_KEY_FOREGROUND:
       /* -d and -f need to be processed by FUSE */

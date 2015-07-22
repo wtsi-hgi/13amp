@@ -35,7 +35,7 @@ Development Plan/Progress
     [ ]  destroy
   [ ]  Bugs / Warnings
     [ ]  Default source to pwd
-    [ ]  Options handling
+    [X]  Options handling
   [ ]  ...
 [ ]  CRAM-to-BAM conversion (linear seek)
   [ ]  ...

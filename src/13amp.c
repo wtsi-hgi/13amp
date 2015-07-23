@@ -37,24 +37,24 @@ static struct fuse_operations cramp_ops = {
 
 /* FUSE Options */
 static struct fuse_opt cramp_fuse_opts[] = {
-  CRAMP_FUSE_OPT("-S %s",        source, 0),
-  CRAMP_FUSE_OPT("--source=%s",  source, 0),
-  CRAMP_FUSE_OPT("source=%s",    source, 0),
+  CRAMP_FUSE_OPT("-S %s",       source, 0),
+  CRAMP_FUSE_OPT("--source=%s", source, 0),
+  CRAMP_FUSE_OPT("source=%s",   source, 0),
 
-  FUSE_OPT_KEY("--debug",        CRAMP_FUSE_CONF_KEY_DEBUG_ME),
+  FUSE_OPT_KEY("--debug",       CRAMP_FUSE_CONF_KEY_DEBUG_ME),
 
-  FUSE_OPT_KEY("-d",             CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
-  FUSE_OPT_KEY("debug",          CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
+  FUSE_OPT_KEY("-d",            CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
+  FUSE_OPT_KEY("debug",         CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
 
-  FUSE_OPT_KEY("-V",             CRAMP_FUSE_CONF_KEY_VERSION),
-  FUSE_OPT_KEY("--version",      CRAMP_FUSE_CONF_KEY_VERSION),
+  FUSE_OPT_KEY("-V",            CRAMP_FUSE_CONF_KEY_VERSION),
+  FUSE_OPT_KEY("--version",     CRAMP_FUSE_CONF_KEY_VERSION),
 
-  FUSE_OPT_KEY("-h",             CRAMP_FUSE_CONF_KEY_HELP),
-  FUSE_OPT_KEY("--help",         CRAMP_FUSE_CONF_KEY_HELP),
+  FUSE_OPT_KEY("-h",            CRAMP_FUSE_CONF_KEY_HELP),
+  FUSE_OPT_KEY("--help",        CRAMP_FUSE_CONF_KEY_HELP),
 
-  FUSE_OPT_KEY("-f",             CRAMP_FUSE_CONF_KEY_FOREGROUND),
+  FUSE_OPT_KEY("-f",            CRAMP_FUSE_CONF_KEY_FOREGROUND),
 
-  FUSE_OPT_KEY("-s",             CRAMP_FUSE_CONF_KEY_SINGLETHREAD),
+  FUSE_OPT_KEY("-s",            CRAMP_FUSE_CONF_KEY_SINGLETHREAD),
 
   FUSE_OPT_END
 };

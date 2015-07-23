@@ -35,7 +35,7 @@ Development Plan/Progress
       [ ]  opendir / readdir / releasedir (by extension)
       [ ]  open / read (by magic)
     [X]  init
-    [ ]  destroy
+    [X]  destroy
   [ ]  Bugs / Warnings
     [ ]  Default source to pwd
     [X]  Options handling

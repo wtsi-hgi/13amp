@@ -31,7 +31,7 @@ static struct fuse_operations cramp_ops = {
   /* .opendir = cramp_opendir, */
   .readdir = cramp_readdir,
   /* .releasedir = cramp_releasedir, */
-  /* .destroy = cramp_destroy */
+  .destroy = cramp_destroy
 };
 
 /* FUSE Options */

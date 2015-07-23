@@ -73,12 +73,19 @@ static int actually_cram(const htsFile* fp) {
 }
 
 /**
+  @brief   Get FUSE context private data (helper)
+*/
+static cramp_fuse_t* get_ctx(void) {
+  return (cramp_fuse_t*)(fuse_get_context()->private_data);
+}
+
+/**
   @brief   Initialise filesystem
   @param   conn  FUSE connection info
   @return  ...
 */
 void* cramp_init(struct fuse_conn_info* conn) {
-  cramp_fuse_t* ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  cramp_fuse_t* ctx = get_ctx();
 
   /* Log configuration */
   cramp_log("Source directory: %s", ctx->conf->source);
@@ -95,7 +102,8 @@ void* cramp_init(struct fuse_conn_info* conn) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
-  cramp_fuse_t *ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  cramp_fuse_t* ctx = get_ctx();
+
   char* realpath;
   if (asprintf(&realpath, "%s/%s", ctx->conf->source, path) < 1) {
     (void)fprintf(stderr, "mem fail");
@@ -119,7 +127,8 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
-  cramp_fuse_t *ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  cramp_fuse_t* ctx = get_ctx();
+
   char* realpath;
   if (asprintf(&realpath, "%s/%s", ctx->conf->source, path) < 1) {
     (void)fprintf(stderr, "mem fail");
@@ -219,7 +228,7 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
-  cramp_fuse_t *ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
+  cramp_fuse_t* ctx = get_ctx();
 
   DIR* dp;
   struct dirent* de;
@@ -267,8 +276,9 @@ int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
 
 /**
   @brief   Clean up filesystem on exit
-  @param   data  ...
+  @param   data  FUSE context
 */
 void cramp_destroy(void* data) {
-  /* TODO */
+  cramp_fuse_t* ctx = (cramp_fuse_t*)data;
+  free(ctx->conf->source);
 }

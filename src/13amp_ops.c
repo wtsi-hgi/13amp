@@ -35,6 +35,8 @@
 
 #include <fuse.h>
 
+#include <htslib/hts.h>
+
 /**
   @brief   Check file extension for .cram
   @param   path  File path
@@ -53,12 +55,21 @@ static int possibly_cram(const char* path) {
 }
 
 /**
-  @brief   Check file is a CRAM using HTSLib
+  @brief   Check HTSLib open file is a CRAM
   @param   path  File path
   @return  1 = Yep; 0 = Nope
 */
-static int actually_cram(const char* path) {
-  /* TODO */
+static int actually_cram(const htsFile* fp) {
+  int ret = 0;
+
+  /* Open file and extract format */
+  const htsFormat* format = hts_get_format(fp);
+
+  if (format) {
+    ret = (format->format == cram);
+  }
+
+  return ret;
 }
 
 /**
@@ -109,6 +120,23 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
   }
 
   (void)fprintf(stderr, "flags: 0x%x\n", fi->flags);
+
+  /* TEST Check CRAM file on open */
+  if (possibly_cram(realpath)) {
+    (void)cramp_log(ctx, "\"%s\" could be a CRAM file...", realpath);
+
+    htsFile* fp = hts_open(realpath, "r");
+
+    if (fp) {
+      if (actually_cram(fp)) {
+        (void)cramp_log(ctx, "\"%s\" actually IS a CRAM file :)", realpath);
+      } else {
+        (void)cramp_log(ctx, "Turns out \"%s\" isn't a CRAM file :(", realpath);
+      }
+
+      (void)hts_close(fp);
+    }
+  }
 
   int res = open(realpath, fi->flags);
 

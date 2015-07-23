@@ -7,7 +7,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include "xalloc.h"
+#include "xvasprintf.h"
 
 #include "13amp.h"
 #include "13amp_log.h"
@@ -24,8 +24,7 @@ int cramp_log(cramp_fuse_t* ctx, const char* format, ...) {
   /* Only output if we have to */
   if (ctx->conf->debug_level & DEBUG_ME) {
     /* Construct output format string */
-    char* logfmt = XNMALLOC(strlen(format) + 9, char);
-    (void)sprintf(logfmt, "13 Amp: %s\n", format);
+    char* logfmt = xasprintf("13 Amp: %s\n", format);
 
     /* Extract the data to output */
     va_list data;

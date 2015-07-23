@@ -18,7 +18,6 @@
 
 #include <fuse.h>
 #include <fuse_opt.h>
-#include <fuse_common.h>
 
 #include <htslib/hts.h>
 
@@ -60,10 +59,28 @@ static struct fuse_opt cramp_fuse_opts[] = {
 };
 
 /**
+  @brief  Return the FUSE version as a string (major.minor)
+
+  Based on StackOverflow answer http://stackoverflow.com/a/31569176/876937
+*/
+static char* str_fuse_version(void) {
+  static char ver[5] = {0, 0, 0, 0, 0};
+  
+  if (ver[0] == 0) {
+    int v = fuse_version();
+    int maj = v / 10;
+    int min = v % 10;
+    (void)snprintf(ver, 5, "%d.%d", maj, min);
+  }
+
+  return ver;
+}
+
+/**
   @brief  Usage instructions to stderr
   @param  me  Program name (i.e., argv[0])
 */
-void usage(char* me) {
+static void usage(char* me) {
   /* Secret options!
        -d       Full debugging messages
        --debug  Just 13 Amp debugging messages (i.e., no FUSE)
@@ -97,7 +114,7 @@ void usage(char* me) {
   @param   outargs  ...
   @return  ...
 */
-int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_args* outargs) {
+static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_args* outargs) {
   cramp_fuse_conf_t *conf = data;
 
   switch(key) {
@@ -111,8 +128,8 @@ int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_args* o
       (void)fprintf(stderr,
         "13 Amp %s\n"
         " * HTSLib %s\n"
-        " * FUSE %d\n",
-      PACKAGE_VERSION, hts_version(), fuse_version());
+        " * FUSE %s\n",
+      PACKAGE_VERSION, hts_version(), str_fuse_version());
       exit(0);
 
     case CRAMP_FUSE_CONF_KEY_DEBUG_ME:

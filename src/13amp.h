@@ -44,9 +44,4 @@ typedef struct cramp_fuse {
   cramp_fuse_conf_t* conf;
 } cramp_fuse_t;
 
-/* Function signatures */
-extern int  main(int, char**);
-extern void usage(char*);
-extern int  cramp_fuse_options(void*, const char*, int, struct fuse_args*);
-
 #endif

@@ -37,3 +37,23 @@ void cramp_log(const char* format, ...) {
     free(logfmt);
   }
 }
+
+/**
+  @brief  Fatal messages to stderr then exit
+  @param  status  Exit status
+  @param  format  Format string
+  @param  ...     Variadic data
+
+  NOTE: This is context-less and can be run anywhere
+*/
+void cramp_log_fatal(int status, const char* format, ...) {
+  char* logfmt = xasprintf("13 Amp FATAL: %s\n", format);
+
+  va_list data;
+  va_start(data, format);
+  (void)vfprintf(stderr, logfmt, data);
+  va_end(data);
+
+  free(logfmt);
+  exit(status);
+}

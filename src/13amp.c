@@ -189,19 +189,14 @@ int main(int argc, char** argv) {
 
     if (ret == -1) {
       if (errno == ENOENT) {
-        (void)fprintf(stderr, "FATAL: \"%s\" does not exist\n",
-                              ctx->conf->source);
+        cramp_log_fatal(ENOENT, "\"%s\" does not exist", ctx->conf->source);
       } else {
-        (void)fprintf(stderr, "FATAL: Couldn't stat \"%s\"\n",
-                              ctx->conf->source);
+        cramp_log_fatal(errno, "Couldn't stat \"%s\"", ctx->conf->source);
       }
-      exit(1);
 
     } else {
       if (!S_ISDIR(s.st_mode)) {
-        (void)fprintf(stderr, "FATAL: \"%s\" is not a directory\n",
-                              ctx->conf->source);
-        exit(1);
+        cramp_log_fatal(ENOTDIR, "\"%s\" is not a directory", ctx->conf->source);
       }
     }
   }

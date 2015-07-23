@@ -11,5 +11,6 @@
 
 /* Logging function */
 extern void cramp_log(const char*, ...);
+extern void cramp_log_fatal(int status, const char*, ...);
 
 #endif

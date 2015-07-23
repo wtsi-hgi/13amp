@@ -23,7 +23,7 @@
 
 /* FUSE Operations */
 static struct fuse_operations cramp_ops = {
-  /* .init    = cramp_init, */
+  .init    = cramp_init,
   .getattr = cramp_getattr,
   .open    = cramp_open,
   .read    = cramp_read,
@@ -206,15 +206,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  /* Log configuration */
-  (void)cramp_log(ctx, "Source directory: %s",
-                       ctx->conf->source);
-
-  (void)cramp_log(ctx, "Debug level: %d",
-                       ctx->conf->debug_level);
-
-  (void)cramp_log(ctx, "Single threaded: %s",
-                       ctx->conf->one_thread ? "yes" : "no");
-
+  /* Let's go! */
   return fuse_main(args.argc, args.argv, &cramp_ops, &cramp_fuse);
 }

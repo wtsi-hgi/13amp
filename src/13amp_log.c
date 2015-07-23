@@ -12,14 +12,17 @@
 #include "13amp.h"
 #include "13amp_log.h"
 
+#include <fuse.h>
+
 /**
   @brief  Debug messages to stderr
-  @param  ctx     Global context
   @param  format  Format string
   @param  ...     Variadic data
+
+  NOTE: This can only be run during the FUSE session
 */
-int cramp_log(cramp_fuse_t* ctx, const char* format, ...) {
-  int res = 0;
+void cramp_log(const char* format, ...) {
+  cramp_fuse_t* ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
 
   /* Only output if we have to */
   if (ctx->conf->debug_level & DEBUG_ME) {
@@ -29,11 +32,9 @@ int cramp_log(cramp_fuse_t* ctx, const char* format, ...) {
     /* Extract the data to output */
     va_list data;
     va_start(data, format);
-    res = vfprintf(stderr, logfmt, data);
+    (void)vfprintf(stderr, logfmt, data);
     va_end(data);
 
     free(logfmt);
   }
-  
-  return res;
 }

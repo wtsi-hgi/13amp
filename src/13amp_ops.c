@@ -78,7 +78,14 @@ static int actually_cram(const htsFile* fp) {
   @return  ...
 */
 void* cramp_init(struct fuse_conn_info* conn) {
-  /* TODO */
+  cramp_fuse_t* ctx = (cramp_fuse_t*)(fuse_get_context()->private_data);
+
+  /* Log configuration */
+  cramp_log("Source directory: %s", ctx->conf->source);
+  cramp_log("Debug level: %d", ctx->conf->debug_level);
+  cramp_log("Single threaded: %s", ctx->conf->one_thread ? "yes" : "no");
+
+  return ctx;
 }
 
 /**
@@ -123,15 +130,15 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
 
   /* TEST Check CRAM file on open */
   if (possibly_cram(realpath)) {
-    (void)cramp_log(ctx, "\"%s\" could be a CRAM file...", realpath);
+    cramp_log("\"%s\" could be a CRAM file...", realpath);
 
     htsFile* fp = hts_open(realpath, "r");
 
     if (fp) {
       if (actually_cram(fp)) {
-        (void)cramp_log(ctx, "\"%s\" actually IS a CRAM file :)", realpath);
+        cramp_log("\"%s\" actually IS a CRAM file :)", realpath);
       } else {
-        (void)cramp_log(ctx, "Turns out \"%s\" isn't a CRAM file :(", realpath);
+        cramp_log("Turns out \"%s\" isn't a CRAM file :(", realpath);
       }
 
       (void)hts_close(fp);

@@ -28,6 +28,7 @@
 #include "size_max.h"
 #include "version-etc.h"
 #include "xalloc.h"
+#include "xvasprintf.h"
 #include "xstrndup.h"
 
 #include "13amp.h"
@@ -36,6 +37,9 @@
 #include <fuse.h>
 
 #include <htslib/hts.h>
+
+/* Get context macro */
+#define CTX (cramp_fuse_t*)(fuse_get_context()->private_data)
 
 /**
   @brief   Check file extension for .cram
@@ -59,7 +63,7 @@ static int possibly_cram(const char* path) {
   @param   path  File path
   @return  1 = Yep; 0 = Nope
 */
-static int actually_cram(const htsFile* fp) {
+static int actually_cram(htsFile* fp) {
   int ret = 0;
 
   /* Open file and extract format */
@@ -73,10 +77,34 @@ static int actually_cram(const htsFile* fp) {
 }
 
 /**
-  @brief   Get FUSE context private data (helper)
+  @brief   Convert the mount path to the source and normalise
+  @param   path  Path on mounted FS
+  @return  malloc'd pointer to real path
+
+  Note: Should crash out on memory failure
 */
-static cramp_fuse_t* get_ctx(void) {
-  return (cramp_fuse_t*)(fuse_get_context()->private_data);
+static char* xpath(const char* path) {
+  /* Canonicalised source directory and whether it ends with a slash */
+  static char* source = NULL;
+  static int   src_slashed = 0;
+
+  if (source == NULL) {
+    cramp_fuse_t* ctx = CTX;
+    source = ctx->conf->source;
+
+    int length = strlen(source);
+    src_slashed = ((char)*(source + length - 1) == '/');
+  }
+
+  /* Strip leading slashes from mount path */
+  char* mount = path;
+  while ((char)*mount == '/') {
+    ++mount;
+  }
+
+  return xasprintf("%s%s%s", source,
+                             src_slashed ? "" : "/",
+                             mount);
 }
 
 /**
@@ -85,12 +113,12 @@ static cramp_fuse_t* get_ctx(void) {
   @return  ...
 */
 void* cramp_init(struct fuse_conn_info* conn) {
-  cramp_fuse_t* ctx = get_ctx();
+  cramp_fuse_t* ctx = CTX;
 
   /* Log configuration */
-  cramp_log("Source directory: %s", ctx->conf->source);
-  cramp_log("Debug level: %d", ctx->conf->debug_level);
-  cramp_log("Single threaded: %s", ctx->conf->one_thread ? "yes" : "no");
+  cramp_log("conf.source = %s",      ctx->conf->source);
+  cramp_log("conf.debug_level = %d", ctx->conf->debug_level);
+  cramp_log("conf.one_thread = %s",  ctx->conf->one_thread ? "true" : "false");
 
   return ctx;
 }
@@ -102,21 +130,16 @@ void* cramp_init(struct fuse_conn_info* conn) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
-  cramp_fuse_t* ctx = get_ctx();
+  cramp_fuse_t* ctx = CTX;
+  char* srcpath = xpath(path);
 
-  char* realpath;
-  if (asprintf(&realpath, "%s/%s", ctx->conf->source, path) < 1) {
-    (void)fprintf(stderr, "mem fail");
-    abort();
-  }
-
-  int res = lstat(realpath, stbuf);
+  int res = lstat(srcpath, stbuf);
 
   if (res == -1) {
     return -errno;
   }
 
-  free(realpath);
+  free(srcpath);
   return 0;
 }
 
@@ -127,34 +150,29 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
-  cramp_fuse_t* ctx = get_ctx();
-
-  char* realpath;
-  if (asprintf(&realpath, "%s/%s", ctx->conf->source, path) < 1) {
-    (void)fprintf(stderr, "mem fail");
-    abort();
-  }
+  cramp_fuse_t* ctx = CTX;
+  char* srcpath = xpath(path);
 
   (void)fprintf(stderr, "flags: 0x%x\n", fi->flags);
 
   /* TEST Check CRAM file on open */
-  if (possibly_cram(realpath)) {
-    cramp_log("\"%s\" could be a CRAM file...", realpath);
+  if (possibly_cram(srcpath)) {
+    cramp_log("\"%s\" could be a CRAM file...", srcpath);
 
-    htsFile* fp = hts_open(realpath, "r");
+    htsFile* fp = hts_open(srcpath, "r");
 
     if (fp) {
       if (actually_cram(fp)) {
-        cramp_log("\"%s\" actually IS a CRAM file :)", realpath);
+        cramp_log("\"%s\" actually IS a CRAM file :)", srcpath);
       } else {
-        cramp_log("Turns out \"%s\" isn't a CRAM file :(", realpath);
+        cramp_log("Turns out \"%s\" isn't a CRAM file :(", srcpath);
       }
 
       (void)hts_close(fp);
     }
   }
 
-  int res = open(realpath, fi->flags);
+  int res = open(srcpath, fi->flags);
 
   if (res == -1) {
     return -errno;
@@ -162,7 +180,7 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
     fi->fh = res;
   }
 
-  free(realpath);
+  free(srcpath);
   return 0;
 }
 
@@ -228,7 +246,8 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
-  cramp_fuse_t* ctx = get_ctx();
+  cramp_fuse_t* ctx = CTX;
+  char* srcpath = xpath(path);
 
   DIR* dp;
   struct dirent* de;
@@ -236,13 +255,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   (void)offset;
   (void)fi;
 
-  char* realpath;
-  if (asprintf(&realpath, "%s/%s", ctx->conf->source, path) < 1) {
-    (void)fprintf(stderr, "mem fail");
-    abort();
-  }
-
-  dp = opendir(realpath);
+  dp = opendir(srcpath);
   if (dp == NULL) {
     return -errno;
   }
@@ -260,7 +273,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   }
 
   closedir(dp);
-  free(realpath);
+  free(srcpath);
   return 0;
 }
 

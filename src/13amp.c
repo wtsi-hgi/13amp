@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "canonicalize.h"
 #include "xgetcwd.h"
 
 #include "13amp.h"
@@ -80,7 +81,7 @@ static char* str_fuse_version(void) {
   @brief  Usage instructions to stderr
   @param  me  Program name (i.e., argv[0])
 */
-static void usage(char* me) {
+static void usage(void) {
   /* Secret options!
        -d       Full debugging messages
        --debug  Just 13 Amp debugging messages (i.e., no FUSE)
@@ -103,7 +104,7 @@ static void usage(char* me) {
     " * Per the REF_CACHE environment variable;\n"
     " * Per the REF_PATH environment variable;\n"
     " * As specified in the CRAM's UR header tag.\n",
-  me);
+  PACKAGE_NAME);
 }
 
 /**
@@ -119,7 +120,7 @@ static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_
 
   switch(key) {
     case CRAMP_FUSE_CONF_KEY_HELP:
-      usage(outargs->argv[0]);
+      usage();
       exit(1);
 
     case CRAMP_FUSE_CONF_KEY_VERSION:
@@ -189,16 +190,22 @@ int main(int argc, char** argv) {
 
     if (ret == -1) {
       if (errno == ENOENT) {
-        cramp_log_fatal(ENOENT, "\"%s\" does not exist", ctx->conf->source);
+        cramp_log_fatal("\"%s\" does not exist", ctx->conf->source);
       } else {
-        cramp_log_fatal(errno, "Couldn't stat \"%s\"", ctx->conf->source);
+        cramp_log_fatal("Couldn't stat \"%s\"", ctx->conf->source);
       }
 
     } else {
       if (!S_ISDIR(s.st_mode)) {
-        cramp_log_fatal(ENOTDIR, "\"%s\" is not a directory", ctx->conf->source);
+        errno = ENOTDIR;
+        cramp_log_fatal("\"%s\" is not a directory", ctx->conf->source);
       }
     }
+
+    /* If we've got this far, we're good. Canonicalise */
+    char* rawsrc = ctx->conf->source;
+    ctx->conf->source = canonicalize_filename_mode(rawsrc, CAN_EXISTING);
+    free(rawsrc);
   }
 
   /* Let's go! */

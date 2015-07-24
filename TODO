@@ -36,8 +36,8 @@ Development Plan/Progress
       [ ]  open / read (by magic)
     [X]  init
     [X]  destroy
-  [ ]  Bugs / Warnings
-    [ ]  Default source to pwd
+  [X]  Bugs / Warnings
+    [X]  Default source to pwd
     [X]  Options handling
   [ ]  ...
 [ ]  CRAM-to-BAM conversion (linear seek)

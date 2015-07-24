@@ -9,8 +9,11 @@
 #define DEBUG_ME   (1 << 1)
 #define DEBUG_ALL  (DEBUG_FUSE | DEBUG_ME)
 
+/* General fatal error exit code */
+#define EFATAL -1
+
 /* Logging function */
 extern void cramp_log(const char*, ...);
-extern void cramp_log_fatal(int status, const char*, ...);
+extern void cramp_log_fatal(const char*, ...);
 
 #endif

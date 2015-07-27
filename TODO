@@ -27,7 +27,7 @@ Development Plan/Progress
   [X]  Debugging / Logging
   [ ]  FUSE operations
     [ ]  FUSE file information struct
-    [ ]  Ignore mount directory if recursive
+    [?]  Ignore mount directory if recursive
     [ ]  CRAM identification and virtual BAM injection
       [X]  CRAM checking
         [X]  by extension
@@ -39,7 +39,6 @@ Development Plan/Progress
   [X]  Bugs / Warnings
     [X]  Default source to pwd
     [X]  Options handling
-  [ ]  ...
 [ ]  CRAM-to-BAM conversion (linear seek)
   [ ]  ...
 [ ]  Iteration/Refactor 2

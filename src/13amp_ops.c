@@ -46,7 +46,9 @@
   @param   path  File path
   @return  1 = Yep; 0 = Nope
 
-  This is nothing more than a simple string comparison
+  This is just a stupid-simple string comparison. It needs to be cheap,
+  as it will be run regularly (e.g., on every entry in a readdir), but
+  still provide a reasonable proxy to the truth.
 */
 static int possibly_cram(const char* path) {
   size_t len = strlen(path);
@@ -158,6 +160,8 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
   /* TEST Check CRAM file on open */
   if (possibly_cram(srcpath)) {
     cramp_log("\"%s\" could be a CRAM file...", srcpath);
+
+    /* XXX S_ISREG || S_ISLNK */
 
     htsFile* fp = hts_open(srcpath, "r");
 

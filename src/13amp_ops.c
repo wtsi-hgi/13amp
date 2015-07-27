@@ -1,7 +1,7 @@
 /* GPLv3 or later
  * Copyright (c) 2015 Genome Research Limited */
 
-/* FUSE operations derived from fusexmp.c
+/* FUSE operations derived from fusexmp.c and fusexmp_fh.c
  * Copyright (c) 2001-2007 Miklos Szeredi */
 
 #include "config.h"
@@ -22,14 +22,8 @@
 #include "error.h"
 #include "dirent-safer.h"
 #include "gl_avltreehash_list.h"
-#include "gl_xlist.h"
 #include "hash-pjw.h"
-#include "progname.h"
-#include "size_max.h"
-#include "version-etc.h"
-#include "xalloc.h"
 #include "xvasprintf.h"
-#include "xstrndup.h"
 
 #include "13amp.h"
 #include "13amp_log.h"
@@ -40,6 +34,22 @@
 
 /* Get context macro */
 #define CTX (cramp_fuse_t*)(fuse_get_context()->private_data)
+
+/**
+  @brief   ...
+  @var     dp      ...
+  @var     entry   ...
+  @var     offset  ...
+*/
+struct cramp_dirp {
+  DIR*           dp;
+  struct dirent* entry;
+  off_t          offset;
+};
+
+static struct cramp_dirp* get_dirp(struct fuse_file_info* fi) {
+  return (struct cramp_dirp*)(uintptr_t)fi->fh;
+}
 
 /**
   @brief   Check file extension for .cram
@@ -83,9 +93,11 @@ static int actually_cram(htsFile* fp) {
   @param   path  Path on mounted FS
   @return  malloc'd pointer to real path
 
-  Note: Should crash out on memory failure
+  Note: This will call the `xalloc_die` stub when there's a memory
+  allocation failure; but we want FUSE to handle such cases, per its
+  design, so we still have to do manual checking.
 */
-static char* xpath(const char* path) {
+static char* xapath(const char* path) {
   /* Canonicalised source directory and whether it ends with a slash */
   static char* source = NULL;
   static int   src_slashed = 0;
@@ -99,7 +111,7 @@ static char* xpath(const char* path) {
   }
 
   /* Strip leading slashes from mount path */
-  char* mount = path;
+  const char* mount = path;
   while ((char)*mount == '/') {
     ++mount;
   }
@@ -133,7 +145,11 @@ void* cramp_init(struct fuse_conn_info* conn) {
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
   cramp_fuse_t* ctx = CTX;
-  char* srcpath = xpath(path);
+
+  char* srcpath = xapath(path);
+  if (srcpath == NULL) {
+    return -errno;
+  }
 
   int res = lstat(srcpath, stbuf);
 
@@ -153,7 +169,11 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
   cramp_fuse_t* ctx = CTX;
-  char* srcpath = xpath(path);
+
+  char* srcpath = xapath(path);
+  if (srcpath == NULL) {
+    return -errno;
+  }
 
   (void)fprintf(stderr, "flags: 0x%x\n", fi->flags);
 
@@ -237,7 +257,30 @@ int cramp_release(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_opendir(const char* path, struct fuse_file_info* fi) {
-  /* TODO */
+  int res;
+
+  char* srcpath = xapath(path);
+  if (srcpath == NULL) {
+    return -errno;
+  }
+
+  struct cramp_dirp* d = malloc(sizeof(struct cramp_dirp));
+  if (d == NULL) {
+    return -errno;
+  }
+
+  d->dp = opendir(srcpath);
+  if (d->dp == NULL) {
+    res = -errno;
+    free(d);
+    return res;
+  }
+
+  d->offset = 0;
+  d->entry = NULL;
+
+  fi->fh = (unsigned long)d;
+  return 0;
 }
 
 /**
@@ -251,7 +294,49 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
   cramp_fuse_t* ctx = CTX;
-  char* srcpath = xpath(path);
+
+  struct cramp_dirp* d = get_dirp(fi);
+  (void)path;
+
+  if (offset != d->offset) {
+    seekdir(d->dp, offset);
+    d->entry = NULL;
+    d->offset = offset;
+  }
+
+  while (1) {
+    struct stat st;
+    off_t nextoff;
+
+    if (!d->entry) {
+      d->entry = readdir(d->dp);
+      if (!d->entry) {
+        break;
+      }
+    }
+
+    memset(&st, 0, sizeof(st));
+
+    st.st_ino = d->entry->d_ino;
+    st.st_mode = d->entry->d_type << 12;
+
+    nextoff = telldir(d->dp);
+
+    if (filler(buf, d->entry->d_name, &st, nextoff)) {
+      break;
+    }
+
+    d->entry = NULL;
+    d->offset = nextoff;
+  }
+
+  return 0;
+
+  /*
+  char* srcpath = xapath(path);
+  if (srcpath == NULL) {
+    return -errno;
+  }
 
   DIR* dp;
   struct dirent* de;
@@ -279,6 +364,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   closedir(dp);
   free(srcpath);
   return 0;
+  */
 }
 
 /**
@@ -288,7 +374,13 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
-  /* TODO */
+  struct cramp_dirp* d = get_dirp(fi);
+  (void)path;
+
+  closedir(d->dp);
+  free(d);
+
+  return 0;
 }
 
 /**

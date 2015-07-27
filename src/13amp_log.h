@@ -16,4 +16,7 @@
 extern void cramp_log(const char*, ...);
 extern void cramp_log_fatal(const char*, ...);
 
+/* Stub */
+extern void xalloc_die(void);
+
 #endif

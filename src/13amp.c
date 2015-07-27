@@ -24,15 +24,15 @@
 
 /* FUSE Operations */
 static struct fuse_operations cramp_ops = {
-  .init    = cramp_init,
-  .getattr = cramp_getattr,
-  .open    = cramp_open,
-  .read    = cramp_read,
-  .release = cramp_release,
-  /* .opendir = cramp_opendir, */
-  .readdir = cramp_readdir,
-  /* .releasedir = cramp_releasedir, */
-  .destroy = cramp_destroy
+  .init       = cramp_init,
+  .getattr    = cramp_getattr,
+  .open       = cramp_open,
+  .read       = cramp_read,
+  .release    = cramp_release,
+  .opendir    = cramp_opendir,
+  .readdir    = cramp_readdir,
+  .releasedir = cramp_releasedir,
+  .destroy    = cramp_destroy
 };
 
 /* FUSE Options */
@@ -179,9 +179,13 @@ int main(int argc, char** argv) {
   (void)fuse_opt_parse(&args, &cramp_fuse_conf, cramp_fuse_opts, cramp_fuse_options);
 
   /* Sanitise source directory */
+  /* TODO URL-based source manifest file */
   if (ctx->conf->source == NULL) {
     /* Default to current working dir */
     ctx->conf->source = xgetcwd();
+    if (ctx->conf->source == NULL) {
+      cramp_log_fatal("Memory allocation failure");
+    }
 
   } else {
     /* Check path exists as a directory */

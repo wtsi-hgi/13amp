@@ -28,6 +28,10 @@ void cramp_log(const char* format, ...) {
   if (ctx->conf->debug_level & DEBUG_ME) {
     /* Construct output format string */
     char* logfmt = xasprintf("13 Amp: %s\n", format);
+    if (logfmt == NULL) {
+      (void)fprintf(stderr, "13 Amp FATAL: Memory allocation failure\n");
+      exit(errno);
+    }
 
     /* Extract the data to output */
     va_list data;
@@ -48,6 +52,10 @@ void cramp_log(const char* format, ...) {
 */
 void cramp_log_fatal(const char* format, ...) {
   char* logfmt = xasprintf("13 Amp FATAL: %s\n", format);
+  if (logfmt == NULL) {
+    (void)fprintf(stderr, "13 Amp FATAL: Memory allocation failure\n");
+    exit(errno);
+  }
 
   va_list data;
   va_start(data, format);
@@ -57,3 +65,10 @@ void cramp_log_fatal(const char* format, ...) {
   free(logfmt);
   exit(errno ? errno : EFATAL); /* I wanna use the Elvis operator ?: */
 }
+
+/**
+  This is called by the xalloc functions in the event of a memory
+  allocation failure. We want to keep using the xalloc functions, but
+  handle failures ourselves/pass them to FUSE.
+*/
+void xalloc_die(void) {}

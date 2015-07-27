@@ -23,6 +23,7 @@ Development Plan/Progress
     [X]  Option parsing
       [X]  Don't need reference
     [X]  Global context
+    [X]  Force read only
     [X]  General tidy
   [X]  Debugging / Logging
   [ ]  FUSE operations

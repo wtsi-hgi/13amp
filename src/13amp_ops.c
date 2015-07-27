@@ -10,6 +10,7 @@
 
 /* gnulib suggested includes */
 #include <errno.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <locale.h>
@@ -20,7 +21,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "error.h"
-#include "dirent-safer.h"
 #include "gl_avltreehash_list.h"
 #include "hash-pjw.h"
 #include "xvasprintf.h"
@@ -35,11 +35,16 @@
 /* Get context macro */
 #define CTX (cramp_fuse_t*)(fuse_get_context()->private_data)
 
+/* Read only masks (n.b., directories need +x for access) */
+#define RO_FILE       (S_IFMT  | S_IRUSR | S_IRGRP | S_IROTH)
+#define RO_DIR        (RO_FILE | S_IXUSR | S_IXGRP | S_IXOTH)
+#define RO_MASK(mode) (S_ISDIR(mode) ? RO_DIR : RO_FILE)
+
 /**
-  @brief   ...
-  @var     dp      ...
-  @var     entry   ...
-  @var     offset  ...
+  @brief   Directory structure
+  @var     dp      Directory handle
+  @var     entry   Pointer to directory entity
+  @var     offset  Offset
 */
 struct cramp_dirp {
   DIR*           dp;
@@ -124,7 +129,7 @@ static char* xapath(const char* path) {
 /**
   @brief   Initialise filesystem
   @param   conn  FUSE connection info
-  @return  ...
+  @return  Pointer to FUSE global context
 */
 void* cramp_init(struct fuse_conn_info* conn) {
   cramp_fuse_t* ctx = CTX;
@@ -156,6 +161,9 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   if (res == -1) {
     return -errno;
   }
+
+  /* Make read only */
+  stbuf->st_mode &= RO_MASK(stbuf->st_mode);
 
   free(srcpath);
   return 0;
@@ -293,8 +301,6 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
-  cramp_fuse_t* ctx = CTX;
-
   struct cramp_dirp* d = get_dirp(fi);
   (void)path;
 
@@ -318,7 +324,8 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
     memset(&st, 0, sizeof(st));
 
     st.st_ino = d->entry->d_ino;
-    st.st_mode = d->entry->d_type << 12;
+    st.st_mode = DTTOIF(d->entry->d_type);
+    st.st_mode &= RO_MASK(st.st_mode);
 
     nextoff = telldir(d->dp);
 
@@ -331,40 +338,6 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   }
 
   return 0;
-
-  /*
-  char* srcpath = xapath(path);
-  if (srcpath == NULL) {
-    return -errno;
-  }
-
-  DIR* dp;
-  struct dirent* de;
-
-  (void)offset;
-  (void)fi;
-
-  dp = opendir(srcpath);
-  if (dp == NULL) {
-    return -errno;
-  }
-
-  while ((de = readdir(dp)) != NULL) {
-    struct stat st;
-    memset(&st, 0, sizeof(st));
-    
-    st.st_ino = de->d_ino;
-    st.st_mode = de->d_type << 12;
-
-    if (filler(buf, de->d_name, &st, 0)) {
-      break;
-    }
-  }
-
-  closedir(dp);
-  free(srcpath);
-  return 0;
-  */
 }
 
 /**

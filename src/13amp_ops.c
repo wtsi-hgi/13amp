@@ -15,8 +15,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "gl_avltreehash_list.h"
-#include "hash-pjw.h"
 #include "xvasprintf.h"
 
 #include "13amp.h"
@@ -25,6 +23,7 @@
 #include <fuse.h>
 
 #include <htslib/hts.h>
+#include <htslib/khash.h>
 
 /* Get context macro */
 #define CTX (cramp_fuse_t*)(fuse_get_context()->private_data)

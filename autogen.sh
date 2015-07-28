@@ -5,4 +5,3 @@ if [ ! -d ./gnulib ] ; then
 else
     autoreconf --verbose --install || (echo "autoreconf failed" && exit 1)
 fi
-

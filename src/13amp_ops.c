@@ -6,21 +6,15 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-
-/* gnulib suggested includes */
-#include <errno.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
-#include <getopt.h>
-#include <locale.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "error.h"
 #include "gl_avltreehash_list.h"
 #include "hash-pjw.h"
 #include "xvasprintf.h"

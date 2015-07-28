@@ -22,7 +22,6 @@ LT_PREREQ([2.4.2])
 # Initialize automake
 AC_PROG_MAKE_SET
 AM_INIT_AUTOMAKE([foreign 1.13 -Wall -Werror dist-bzip2])
-#AM_GNU_GETTEXT_VERSION([0.18.2])
 
 # Check for C compiler
 AC_PROG_CC
@@ -64,9 +63,6 @@ AC_ARG_VAR([HTSLIB_LDFLAGS],[linker flags for HTSLIB])
 AC_MSG_CHECKING([for htslib])
 AC_CHECK_LIB([hts], [hts_open], [], [AC_MSG_FAILURE([htslib is required but check for hts_open function failed! (is HTSLIB_LDFLAGS set correctly?)])], [${LIBS} ${HTSLIB_LDFLAGS} ${ZLIB_LDFLAGS} ${LTLIBMULTITHREAD}])
 
-# Setup GetText for internationalisation
-#AM_GNU_GETTEXT([external])
-
 # Which files to configure 
 AC_CONFIG_FILES([
  Makefile 
@@ -75,8 +71,6 @@ AC_CONFIG_FILES([
  test/Makefile
  test/vars
 ])
-# po/Makefile.in
-
 
 # for TAP testing
 AC_REQUIRE_AUX_FILE([tap-driver.sh])

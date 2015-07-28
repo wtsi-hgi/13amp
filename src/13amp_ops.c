@@ -35,10 +35,8 @@
 /* Get context macro */
 #define CTX (cramp_fuse_t*)(fuse_get_context()->private_data)
 
-/* Read only masks (n.b., directories need +x for access) */
-#define RO_FILE       (S_IFMT  | S_IRUSR | S_IRGRP | S_IROTH)
-#define RO_DIR        (RO_FILE | S_IXUSR | S_IXGRP | S_IXOTH)
-#define RO_MASK(mode) (S_ISDIR(mode) ? RO_DIR : RO_FILE)
+/* chmod a-w ALL THE THINGS! */
+#define UNWRITEABLE (~(S_IWUSR | S_IWGRP | S_IWOTH))
 
 /**
   @brief   Directory structure
@@ -163,7 +161,7 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   }
 
   /* Make read only */
-  stbuf->st_mode &= RO_MASK(stbuf->st_mode);
+  stbuf->st_mode &= UNWRITEABLE;
 
   free(srcpath);
   return 0;
@@ -324,8 +322,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
     memset(&st, 0, sizeof(st));
 
     st.st_ino = d->entry->d_ino;
-    st.st_mode = DTTOIF(d->entry->d_type);
-    st.st_mode &= RO_MASK(st.st_mode);
+    st.st_mode = DTTOIF(d->entry->d_type) & UNWRITEABLE;
 
     nextoff = telldir(d->dp);
 

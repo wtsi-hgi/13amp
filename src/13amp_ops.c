@@ -56,7 +56,7 @@ static struct cramp_dirp* get_dirp(struct fuse_file_info* fi) {
   as it will be run regularly (e.g., on every entry in a readdir), but
   still provide a reasonable proxy to the truth.
 */
-static int possibly_cram(const char* path) {
+static inline int possibly_cram(const char* path) {
   size_t len = strlen(path);
 
   if (len < 5) {
@@ -71,7 +71,7 @@ static int possibly_cram(const char* path) {
   @param   path  File path
   @return  1 = Yep; 0 = Nope
 */
-static int actually_cram(htsFile* fp) {
+static inline int actually_cram(htsFile* fp) {
   int ret = 0;
 
   /* Open file and extract format */
@@ -93,7 +93,7 @@ static int actually_cram(htsFile* fp) {
   allocation failure; but we want FUSE to handle such cases, per its
   design, so we still have to do manual checking.
 */
-static char* xapath(const char* path) {
+static inline char* xapath(const char* path) {
   /* Canonicalised source directory and whether it ends with a slash */
   static char* source = NULL;
   static int   src_slashed = 0;

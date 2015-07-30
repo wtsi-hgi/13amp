@@ -43,8 +43,48 @@ struct cramp_dirp {
   off_t          offset;
 };
 
+/**
+  @brief   Cast the file handle to the directory structure
+  @param   FUSE file info
+
+  The FUSE file info has a file handle member, typed as unsigned long.
+  To extend this, we cast in a pointer to a cramp_dirp structure. This
+  function casts it back, so we can use it.
+*/
 static struct cramp_dirp* get_dirp(struct fuse_file_info* fi) {
   return (struct cramp_dirp*)(uintptr_t)fi->fh;
+}
+
+enum fpType { fpNorm, fpCRAM };
+
+/**
+  @brief   File structure
+  @var     path   File path
+  @var     kind   Union tag
+  @var     filep  Normal file handle
+  @var     cramp  CRAM file handle
+
+  TODO What else needs to go in here?...
+*/
+struct cramp_filep {
+  const char* path;
+  enum fpType kind;
+  union {
+    int       filep;
+    htsFile*  cramp;
+  };
+};
+
+/**
+  @brief   Cast the file handle to the file structure
+  @param   FUSE file info
+
+  The FUSE file info has a file handle member, typed as unsigned long.
+  To extend this, we cast in a pointer to a cramp_filep structure. This
+  function casts it back, so we can use it.
+*/
+static struct cramp_filep* get_filep(struct fuse_file_info* fi) {
+  return (struct cramp_filep*)(uintptr_t)fi->fh;
 }
 
 /**
@@ -167,43 +207,59 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
-  cramp_fuse_t* ctx = CTX;
+  int res;
 
   char* srcpath = xapath(path);
   if (srcpath == NULL) {
     return -errno;
   }
 
-  (void)fprintf(stderr, "flags: 0x%x\n", fi->flags);
+  struct cramp_filep* f = malloc(sizeof(struct cramp_filep));
+  if (f == NULL) {
+    return -errno;
+  }
 
-  /* TEST Check CRAM file on open */
-  if (possibly_cram(srcpath)) {
-    cramp_log("\"%s\" could be a CRAM file...", srcpath);
+  f->path = srcpath;
+  int opened = 0;
 
-    /* XXX S_ISREG || S_ISLNK */
-
-    htsFile* fp = hts_open(srcpath, "r");
-
-    if (fp) {
-      if (actually_cram(fp)) {
-        cramp_log("\"%s\" actually IS a CRAM file :)", srcpath);
+  /* Check we've got a CRAM file */
+  if (possibly_cram(f->path)) {
+    if (1 /* TODO S_ISREG(f->path) || S_ISLNK(f->path) */) {
+      f->cramp = hts_open(f->path, "r");
+      
+      if (f->cramp == NULL) {
+        res = -errno;
+        free(f);
+        return res;
       } else {
-        cramp_log("Turns out \"%s\" isn't a CRAM file :(", srcpath);
+        if (actually_cram(f->cramp)) {
+          /* We've got a CRAM file */
+          f->kind = fpCRAM;
+          opened  = 1;
+        } else {
+          if (hts_close(f->cramp) == -1) {
+            return -errno;
+          }
+        }
       }
-
-      (void)hts_close(fp);
     }
   }
 
-  int res = open(srcpath, fi->flags);
+  /* Regular file */
+  if (!opened) {
+    f->filep = open(f->path, fi->flags);
 
-  if (res == -1) {
-    return -errno;
-  } else {
-    fi->fh = res;
+    if (f->filep == -1) {
+      res = -errno;
+      free(f);
+      return res;
+    } else {
+      f->kind = fpNorm;
+      opened  = 1;
+    }
   }
 
-  free(srcpath);
+  fi->fh = (unsigned long)f;
   return 0;
 }
 
@@ -218,15 +274,29 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
 */
 int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
   int res;
-  
-  /* TODO uint */
-  if (fi->fh < 0) {
-    return -EBADF;
-  }
 
-  res = pread(fi->fh, buf, size, offset);
-  if (res == -1) {
-    return -errno;
+  struct cramp_filep* f = get_filep(fi);
+  (void)path;
+
+  if (f) {
+    switch (f->kind) {
+      case fpNorm:
+        res = pread(f->filep, buf, size, offset);
+        if (res == -1) {
+          return -errno;
+        }
+        break;
+
+      case fpCRAM:
+        /* TODO */
+        cramp_log("CRAM file %s", f->path);
+        break;
+
+      default:
+        return -EPERM;
+    }
+  } else {
+    return -EBADF;
   }
 
   return res;
@@ -239,14 +309,38 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_release(const char* path, struct fuse_file_info* fi) {
+  int res;
+
+  struct cramp_filep* f = get_filep(fi);
   (void)path;
 
-  /* TODO uint */
-  if (fi->fh == 0) {
+  if (f) {
+    free((void*)(f->path));
+
+    switch (f->kind) {
+      case fpNorm:
+        if (close(f->filep) == -1) {
+          res = -errno;
+        }
+        break;
+
+      case fpCRAM:
+        if (hts_close(f->cramp) == -1) {
+          res = -errno;
+        }
+        break;
+
+      default:
+        return -EBADF;
+    }
+
+    free(f);
+
+  } else {
     return -EBADF;
   }
 
-  return close(fi->fh);
+  return res;
 }
 
 /**
@@ -279,6 +373,7 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
   d->entry = NULL;
 
   fi->fh = (unsigned long)d;
+  free(srcpath);
   return 0;
 }
 
@@ -337,13 +432,17 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
+  int res;
+
   struct cramp_dirp* d = get_dirp(fi);
   (void)path;
 
-  closedir(d->dp);
+  if(closedir(d->dp) == -1) {
+    res = -errno;
+  }
   free(d);
 
-  return 0;
+  return res;
 }
 
 /**

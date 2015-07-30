@@ -27,7 +27,7 @@ Development Plan/Progress
     [X]  General tidy
   [X]  Debugging / Logging
   [ ]  FUSE operations
-    [ ]  FUSE file information struct
+    [X]  FUSE file and directory information structs
     [?]  Ignore mount directory if recursive
     [ ]  CRAM identification and virtual BAM injection
       [X]  CRAM checking

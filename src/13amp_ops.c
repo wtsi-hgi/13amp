@@ -412,7 +412,8 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
   struct cramp_dirp* d = get_dirp(fi);
   khash_t(hash_t) *contents = kh_init(hash_t);
-  (void)path;
+
+  /* TODO This function is really messy. Tidy it up!! */
 
   /* Seek to the correct offset, if necessary */
   if (offset != d->offset) {
@@ -459,9 +460,17 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
     if ((S_ISREG(st->st_mode) || S_ISLNK(st->st_mode)) &&
         possibly_cram(d->entry->d_name)) {
 
-      /* FIXME d->entry->d_name is the basename of the entry, so we
-         cannot use it alone to resolve the source path */
-      char* srcpath = xapath(d->entry->d_name);
+      /* Full path of directory entry */
+      int length = strlen(path);
+      int path_slashed = ((char)*(path + length - 1) == '/');
+      const char* fullpath = xasprintf("%s%s%s", path, 
+                                                 path_slashed ? "" : "/",
+                                                 d->entry->d_name);
+      if (fullpath == NULL) {
+        return -errno;
+      }
+    
+      char* srcpath = xapath(fullpath);
       if (srcpath == NULL) {
         return -errno;
       }
@@ -519,6 +528,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
         return -errno;
       }
       free(srcpath);
+      free((void*)fullpath);
     }
 
     d->entry = NULL;

@@ -28,13 +28,13 @@ Development Plan/Progress
   [X]  Debugging / Logging
   [ ]  FUSE operations
     [X]  FUSE file and directory information structs
-    [?]  Ignore mount directory if recursive
+    [?]  Ignore mount directory if recursive (see note 1)
     [ ]  CRAM identification and virtual BAM injection
       [X]  CRAM checking
         [X]  by extension
         [X]  by magic
-      [ ]  opendir / readdir / releasedir (by extension)
-      [ ]  open / read (by magic)
+      [.]  opendir / readdir / releasedir
+      [ ]  open / read
     [X]  init
     [X]  destroy
   [X]  Bugs / Warnings
@@ -44,3 +44,14 @@ Development Plan/Progress
   [ ]  ...
 [ ]  Iteration/Refactor 2
 [ ]  ...
+
+Notes
+-----
+
+1. If the source directory contains the mount directory, it all goes
+   horribly wrong! Unfortunately, there is apparently no way of
+   ascertaining the location of the mount directory (because it's not
+   necessarily static[*]), thus I don't see a way of checking for and
+   then excluding anything that resolves to the mount directory.
+
+   [*] http://fuse.996288.n3.nabble.com/Getting-the-mountpoint-from-within-a-fusemod-td11620.html

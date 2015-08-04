@@ -62,7 +62,8 @@ static struct fuse_opt cramp_fuse_opts[] = {
 /**
   @brief  Return the FUSE version as a string (major.minor)
 
-  Based on StackOverflow answer http://stackoverflow.com/a/31569176/876937
+  Based on StackOverflow answer http://stackoverflow.com/a/31569176
+  FUSE PR made that introduces fuse_pkgversion for full version string
 */
 static char* str_fuse_version(void) {
   static char ver[5] = {0, 0, 0, 0, 0};

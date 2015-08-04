@@ -55,6 +55,19 @@ static struct cramp_dirp* get_dirp(struct fuse_file_info* fi) {
   return (struct cramp_dirp*)(uintptr_t)fi->fh;
 }
 
+/**
+  @brief   Directory entry structure
+  @var     st       Stat structure of entry
+  @var     virtual  Entry is virtual (0 = False; 1 = True)
+*/
+struct cramp_entry_t {
+  struct stat* st;
+  int          virtual;
+};
+
+/* Initialise hash table type */
+KHASH_MAP_INIT_STR(hash_t, struct cramp_entry_t*)
+
 enum fpType { fpNorm, fpCRAM };
 
 /**
@@ -190,6 +203,16 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   int res = lstat(srcpath, stbuf);
 
   if (res == -1) {
+
+    /* ENOENT => virtual file */
+    if (errno == ENOENT) {
+      memset(stbuf, 0, sizeof(struct stat));
+      stbuf->st_mode = S_IFREG | 0444;
+      stbuf->st_nlink = 1;
+      stbuf->st_size = 1;
+      return 0;
+    }
+
     return -errno;
   }
 
@@ -388,18 +411,19 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
   struct cramp_dirp* d = get_dirp(fi);
+  khash_t(hash_t) *contents = kh_init(hash_t);
   (void)path;
 
+  /* Seek to the correct offset, if necessary */
   if (offset != d->offset) {
     seekdir(d->dp, offset);
     d->entry = NULL;
     d->offset = offset;
   }
 
+  /* Loop through directory contents */
   while (1) {
-    struct stat st;
-    off_t nextoff;
-
+    /* Read directory, if necessary; break loop when nothing returned */
     if (!d->entry) {
       d->entry = readdir(d->dp);
       if (!d->entry) {
@@ -407,21 +431,118 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
       }
     }
 
-    memset(&st, 0, sizeof(st));
+    struct stat* st = calloc(1, sizeof(struct stat));
+    if (st == NULL) {
+      return -errno;
+    }
 
-    st.st_ino = d->entry->d_ino;
-    st.st_mode = DTTOIF(d->entry->d_type) & UNWRITEABLE;
+    st->st_ino  = d->entry->d_ino;
+    st->st_mode = DTTOIF(d->entry->d_type) & UNWRITEABLE; 
 
-    nextoff = telldir(d->dp);
+    /* Insert item into hash table */
+    int ret;
+    khiter_t key = kh_put(hash_t, contents, d->entry->d_name, &ret);
+    if (ret == -1) {
+      return -errno;
+    }
 
-    if (filler(buf, d->entry->d_name, &st, nextoff)) {
-      break;
+    struct cramp_entry_t* details = malloc(sizeof(struct cramp_entry_t));
+    if (details == NULL) {
+      return -errno;
+    }
+
+    details->st = st;
+    details->virtual = 0;
+    kh_value(contents, key) = details;
+
+    /* Inject virtual BAM file, if we've got a CRAM and no clash */
+    if ((S_ISREG(st->st_mode) || S_ISLNK(st->st_mode)) &&
+        possibly_cram(d->entry->d_name)) {
+
+      /* FIXME d->entry->d_name is the basename of the entry, so we
+         cannot use it alone to resolve the source path */
+      char* srcpath = xapath(d->entry->d_name);
+      if (srcpath == NULL) {
+        return -errno;
+      }
+
+      /* Have we *actually* got a CRAM? */
+      htsFile* fp = hts_open(srcpath, "r");
+      if (fp == NULL) {
+        return -errno;
+      }
+
+      if (actually_cram(fp)) {
+        /* Entity name: s/\.cram$/.bam */
+        size_t bam_length = strlen(d->entry->d_name) - 1;
+        const char* bam_name = malloc(bam_length * sizeof(char));
+        if (bam_name == NULL) {
+          return -errno;
+        }
+
+        memcpy((void*)bam_name, d->entry->d_name, bam_length);
+        memcpy((void*)bam_name + bam_length - 4, ".bam", 5);
+
+        int ret;
+        khiter_t key = kh_put(hash_t, contents, bam_name, &ret);
+
+        switch (ret) {
+          case -1:
+            return -errno;
+
+          case 0:
+            /* Ignore clash */
+            break;
+
+          case 1:
+          case 2: {
+            /* Create virtual entry */
+            struct cramp_entry_t* details = malloc(sizeof(struct cramp_entry_t));
+            if (details == NULL) {
+              return -errno;
+            }
+
+            details->virtual = 1;
+            details->st = calloc(1, sizeof(struct stat));
+            memcpy(details->st, st, sizeof(struct stat));
+
+            kh_value(contents, key) = details;
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
+
+      if(hts_close(fp) == -1) {
+        return -errno;
+      }
+      free(srcpath);
     }
 
     d->entry = NULL;
-    d->offset = nextoff;
   }
 
+  /* Iterate through hash to populate directory */
+  const char* entry;
+  struct cramp_entry_t* details;
+
+  kh_foreach(contents, entry, details, {
+    /* Create directory entry */
+    if (filler(buf, entry, details->st, 0)) {
+      break;
+    }
+
+    /* Free entry data */
+    if (details->virtual) {
+      free((void*)entry);
+    }
+    free(details->st);
+    free(details);
+  })
+
+  kh_destroy(hash_t, contents);
   return 0;
 }
 

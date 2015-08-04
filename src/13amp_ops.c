@@ -204,7 +204,7 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
 
   if (res == -1) {
 
-    /* ENOENT => virtual file */
+    /* TODO: ENOENT => virtual file */
     if (errno == ENOENT) {
       memset(stbuf, 0, sizeof(struct stat));
       stbuf->st_mode = S_IFREG | 0444;
@@ -218,6 +218,30 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
 
   /* Make read only */
   stbuf->st_mode &= UNWRITEABLE;
+
+  free(srcpath);
+  return 0;
+}
+
+/**
+  @brief   Get symlink target
+  @param   path     File path
+  @param   buf      Symlink target buffer
+  @param   bufsize  Length of buffer
+*/
+int cramp_readlink(const char* path, char* buf, size_t bufsize) {
+  int res;
+
+  char *srcpath = xapath(path);
+  if (srcpath == NULL) {
+    return -errno;
+  }
+
+  memset(buf, 0, bufsize);
+  res = readlink(srcpath, buf, bufsize);
+  if (res == -1) {
+    return -errno;
+  }
 
   free(srcpath);
   return 0;

@@ -26,6 +26,7 @@
 static struct fuse_operations cramp_ops = {
   .init       = cramp_init,
   .getattr    = cramp_getattr,
+  .readlink   = cramp_readlink,
   .open       = cramp_open,
   .read       = cramp_read,
   .release    = cramp_release,

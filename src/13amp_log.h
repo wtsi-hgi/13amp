@@ -12,11 +12,11 @@
 /* General fatal error exit code */
 #define EFATAL -1
 
-/* Logging function */
-extern void cramp_log(const char*, ...);
-extern void cramp_log_fatal(const char*, ...);
+/* Logging function macros */
+#define LOG(format, ...) cramp_log(0, format, ##__VA_ARGS__)
+#define WTF(format, ...) cramp_log(1, format, ##__VA_ARGS__)
 
-/* Stub */
-extern void xalloc_die(void);
+/* This shouldn't need to be used directly */
+extern void cramp_log(int, const char*, ...);
 
 #endif

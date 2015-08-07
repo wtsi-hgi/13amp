@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
     /* Default to current working dir */
     ctx->conf->source = xgetcwd();
     if (ctx->conf->source == NULL) {
-      cramp_log_fatal("Memory allocation failure");
+      WTF("Memory allocation failure");
     }
 
   } else {
@@ -196,15 +196,15 @@ int main(int argc, char** argv) {
 
     if (ret == -1) {
       if (errno == ENOENT) {
-        cramp_log_fatal("\"%s\" does not exist", ctx->conf->source);
+        WTF("\"%s\" does not exist", ctx->conf->source);
       } else {
-        cramp_log_fatal("Couldn't stat \"%s\"", ctx->conf->source);
+        WTF("Couldn't stat \"%s\"", ctx->conf->source);
       }
 
     } else {
       if (!S_ISDIR(s.st_mode)) {
         errno = ENOTDIR;
-        cramp_log_fatal("\"%s\" is not a directory", ctx->conf->source);
+        WTF("\"%s\" is not a directory", ctx->conf->source);
       }
     }
 

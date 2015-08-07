@@ -142,7 +142,7 @@ static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_
       break;
 
     case CRAMP_FUSE_CONF_KEY_DEBUG_ALL:
-      conf->debug_level |= DEBUG_FUSE;
+      conf->debug_level |= DEBUG_ALL;
       /* Fall through: debug all => foreground */
 
     case CRAMP_FUSE_CONF_KEY_FOREGROUND:

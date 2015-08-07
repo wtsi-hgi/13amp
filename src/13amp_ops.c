@@ -65,19 +65,32 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
   }
 
   int res = lstat(srcpath, stbuf);
+  int errsav = errno;
 
   if (res == -1) {
+    if (errsav == ENOENT && has_extension(srcpath, ".bam")) {
+      /* It looks like we might have a virtual BAM file */
+      const char* cram_name = sub_extension(srcpath, ".cram");
+      if (cram_name == NULL) {
+        return -errno;
+      }
 
-    /* TODO: ENOENT => virtual file */
-    if (errno == ENOENT) {
-      memset(stbuf, 0, sizeof(struct stat));
-      stbuf->st_mode = S_IFREG | 0444;
-      stbuf->st_nlink = 1;
-      stbuf->st_size = 1;
-      return 0;
+      /* Inherit stat from CRAM file */
+      /* n.b., stat, rather than lstat, to follow symlinks */
+      int res = stat(cram_name, stbuf);
+      free((void*)cram_name);
+
+      if (res == -1 || !CAN_OPEN(stbuf->st_mode)) {
+        /* ...guess not */
+        return -errsav;
+      }
+
+      /* Virtual BAM files should have zero size */
+      stbuf->st_size = 0;
+
+    } else {
+      return -errsav;
     }
-
-    return -errno;
   }
 
   /* Make read only */
@@ -147,7 +160,7 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
         if (actually_cram(f->cramp)) {
           /* We've got a CRAM file */
           f->kind = fpCRAM;
-          opened  = 1;
+          opened = 1;
         } else {
           if (hts_close(f->cramp) == -1) {
             return -errno;
@@ -168,7 +181,7 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
       return res;
     } else {
       f->kind = fpNorm;
-      opened  = 1;
+      opened = 1;
     }
   }
 
@@ -358,7 +371,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
         if (kh_get(hash_t, contents, bam_name) == kh_end(contents)) {
           const char* fullpath = path_concat(path, d->entry->d_name);
           if (fullpath) {
-            const char* srcpath  = source_path(fullpath);
+            const char* srcpath = source_path(fullpath);
             free((void*)fullpath);
             if (srcpath) {
               int res = is_cram(srcpath);
@@ -386,7 +399,9 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                 details->virtual = 1;
                 details->st = calloc(1, sizeof(struct stat));
                 memcpy(details->st, st, sizeof(struct stat));
-                /* TODO Set stat appropriately after copy */
+
+                /* Virtual BAM files should have zero size */
+                details->st->st_size = 0;
 
                 /* Insert virtual entry */
                 kh_value(contents, key) = details;

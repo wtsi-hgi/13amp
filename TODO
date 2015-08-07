@@ -33,7 +33,7 @@ Development Plan/Progress
       [X]  CRAM checking
         [X]  by extension
         [X]  by magic
-      [.]  opendir / readdir / releasedir
+      [X]  opendir / readdir / releasedir
       [ ]  open / read
     [X]  init
     [X]  destroy

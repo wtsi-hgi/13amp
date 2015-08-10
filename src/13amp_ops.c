@@ -341,9 +341,24 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
     st->st_ino  = d->entry->d_ino;
     st->st_mode = DTTOIF(d->entry->d_type) & UNWRITEABLE; 
 
+    /* If the key already exists in the hash table, then it MUST be an
+       injected virtual BAM file. Our policy is that real files mask
+       virtual ones, so we must remove the injected entry and free its
+       memory allocation (rather than simply overwriting).            */
+
+    khiter_t key = kh_get(hash_t, contents, d->entry->d_name);
+    if (key != kh_end(contents)) {
+      const char* clash_key = kh_key(contents, key);
+      struct cramp_entry_t* clash_details = kh_value(contents, key);
+      free((void*)clash_key);
+      free((void*)clash_details->st);
+      free((void*)clash_details);
+      kh_del(hash_t, contents, key);
+    }
+
     /* Insert item into hash table */
     int ret;
-    khiter_t key = kh_put(hash_t, contents, d->entry->d_name, &ret);
+    key = kh_put(hash_t, contents, d->entry->d_name, &ret);
     if (ret == -1) {
       return -errno;
     }

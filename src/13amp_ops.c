@@ -19,6 +19,7 @@
 #include "13amp.h"
 #include "13amp_log.h"
 #include "13amp_util.h"
+#include "13amp_conv.h"
 
 #include <fuse.h>
 
@@ -85,8 +86,9 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
         return -errsav;
       }
 
-      /* Virtual BAM files should have zero size */
-      stbuf->st_size = 0;
+      /* Virtual BAM files should have non-zero size */
+      /* FIXME What should this be? */
+      stbuf->st_size = 1;
 
     } else {
       return -errsav;
@@ -131,8 +133,6 @@ int cramp_readlink(const char* path, char* buf, size_t size) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_open(const char* path, struct fuse_file_info* fi) {
-  int res;
-
   const char* srcpath = source_path(path);
   if (srcpath == NULL) {
     return -errno;
@@ -143,45 +143,39 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
     return -errno;
   }
 
-  f->path = srcpath;
-  int opened = 0;
-  
-#if 0
-  /* Check we've got a CRAM file */
-  if (possibly_cram(f->path)) {
-    if (1 /* TODO S_ISREG(f->path) || S_ISLNK(f->path) */) {
-      f->cramp = hts_open(f->path, "r");
-      
+  /* Assume we're opening a regular file, forced to read only */
+  fi->flags  = O_RDONLY;
+  f->type    = fd_normal;
+  f->filep   = open(srcpath, fi->flags);
+  int errsav = errno;
+
+  if (f->filep == -1) {
+    if (errsav == ENOENT && has_extension(srcpath, ".bam")) {
+      /* It looks like we might have a virtual BAM file */
+      const char* cram_name = sub_extension(srcpath, ".cram");
+      if (cram_name == NULL) {
+        return -errno;
+      }
+
+      f->cramp = hts_open(cram_name, "r");
+      int cramperr = errno;
+      free((void*)cram_name);
+
       if (f->cramp == NULL) {
-        res = -errno;
-        free(f);
-        return res;
+        return -cramperr;
       } else {
-        if (actually_cram(f->cramp)) {
-          /* We've got a CRAM file */
-          f->kind = fpCRAM;
-          opened = 1;
+        const htsFormat* format = hts_get_format(f->cramp);
+        if (format->format == cram) {
+          /* We've got a genuine CRAM file */
+          LOG("Opened virtual BAM file %s", path);
+          f->type = fd_cram;
         } else {
-          if (hts_close(f->cramp) == -1) {
-            return -errno;
-          }
+          (void)hts_close(f->cramp);
+          return -errsav;
         }
       }
-    }
-  }
-#endif
-
-  /* Regular file */
-  if (!opened) {
-    f->filep = open(f->path, fi->flags);
-
-    if (f->filep == -1) {
-      res = -errno;
-      free(f);
-      return res;
     } else {
-      f->kind = fpNorm;
-      opened = 1;
+      return -errsav;
     }
   }
 
@@ -205,24 +199,24 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
   (void)path;
 
   if (f) {
-    switch (f->kind) {
-      case fpNorm:
-        res = pread(f->filep, buf, size, offset);
-        if (res == -1) {
-          return -errno;
+    switch (f->type) {
+      case fd_normal:
+        if (pread(f->filep, buf, size, offset) == -1) {
+          res = -errno;
         }
         break;
 
-      case fpCRAM:
-        /* TODO */
-        LOG("CRAM file %s", f->path);
+      case fd_cram:
+        if (cram2bam(f->cramp, buf, size, offset) == -1) {
+          res = -errno;
+        }
         break;
 
       default:
-        return -EPERM;
+        res = -EPERM;
     }
   } else {
-    return -EBADF;
+    res = -EBADF;
   }
 
   return res;
@@ -241,29 +235,27 @@ int cramp_release(const char* path, struct fuse_file_info* fi) {
   (void)path;
 
   if (f) {
-    free((void*)(f->path));
-
-    switch (f->kind) {
-      case fpNorm:
+    switch (f->type) {
+      case fd_normal:
         if (close(f->filep) == -1) {
           res = -errno;
         }
         break;
 
-      case fpCRAM:
+      case fd_cram:
         if (hts_close(f->cramp) == -1) {
           res = -errno;
         }
         break;
 
       default:
-        return -EBADF;
+        res = -EBADF;
     }
 
     free(f);
 
   } else {
-    return -EBADF;
+    res = -EBADF;
   }
 
   return res;
@@ -415,8 +407,9 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                 details->st = calloc(1, sizeof(struct stat));
                 memcpy(details->st, st, sizeof(struct stat));
 
-                /* Virtual BAM files should have zero size */
-                details->st->st_size = 0;
+                /* Virtual BAM files should have non-zero size */
+                /* FIXME What should this be? */
+                details->st->st_size = 1;
 
                 /* Insert virtual entry */
                 kh_value(contents, key) = details;

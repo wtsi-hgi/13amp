@@ -14,7 +14,7 @@ Development Plan/Progress
       [-]  destroy
   [X]  Build chain
     [X]  Makefile
-[ ]  Iteration/Refactor 1
+[X]  Iteration/Refactor 1
   [X]  Autotools for build
     [X]  HTSLib dependency
     [X]  GNULib dependency
@@ -26,15 +26,15 @@ Development Plan/Progress
     [X]  Force read only
     [X]  General tidy
   [X]  Debugging / Logging
-  [ ]  FUSE operations
+  [X]  FUSE operations
     [X]  FUSE file and directory information structs
     [?]  Ignore mount directory if recursive (see note 1)
-    [ ]  CRAM identification and virtual BAM injection
+    [X]  CRAM identification and virtual BAM injection
       [X]  CRAM checking
         [X]  by extension
         [X]  by magic
       [X]  opendir / readdir / releasedir
-      [ ]  open / read
+      [X]  open / read
     [X]  init
     [X]  destroy
   [X]  Bugs / Warnings
@@ -55,3 +55,10 @@ Notes
    then excluding anything that resolves to the mount directory.
 
    [*] http://fuse.996288.n3.nabble.com/Getting-the-mountpoint-from-within-a-fusemod-td11620.html
+
+2. What should st_size be set to for the injected virtual BAM files? If
+   I set it to zero, no `read` call is made. Apparently[*], it needs to
+   be accurate so the EOF signal can be raised by the OS. Determining
+   the size is really expensive, so hopefully there is a workaround.
+
+   [*] http://stackoverflow.com/a/31940722

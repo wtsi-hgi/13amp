@@ -37,28 +37,26 @@ struct cramp_entry_t {
   int          virtual;
 };
 
-
-/**** TODO START ****/
-
-enum fpType { fpNorm, fpCRAM };
+/**
+  @brief   File descriptor type
+  @var     fd_normal  File descriptor per open(2)
+  @var     fd_cram    File descriptor per hts_open
+*/
+enum fd_type {fd_normal, fd_cram};
 
 /**
-  @brief   File structure
-  @var     path   File path
-  @var     kind   Union tag
+  @brief   File structure (tagged union of file/CRAM handle)
+  @var     type   Union tag
   @var     filep  Normal file handle
-  @var     cramp  CRAM file handle
+  @var     cramp  CRAM file handle for HTSLib
 */
 struct cramp_filep {
-  const char* path;
-  enum fpType kind;
+  enum fd_type type;
   union {
-    int       filep;
-    htsFile*  cramp;
+    int        filep;
+    htsFile*   cramp;
   };
 };
-
-/**** TODO END ****/
 
 /* Utility functions to support file system operations */
 extern const char* path_concat(const char*, const char*);
@@ -67,7 +65,7 @@ extern int         has_extension(const char*, const char*);
 extern const char* sub_extension(const char*, const char*);
 extern int         is_cram(const char*);
 
-extern struct cramp_filep* get_filep(struct fuse_file_info*);
 extern struct cramp_dirp*  get_dirp(struct fuse_file_info*);
+extern struct cramp_filep* get_filep(struct fuse_file_info*);
 
 #endif

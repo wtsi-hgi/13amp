@@ -1,5 +1,6 @@
 # Custom
 build
+.syntastic_c_config
 
 
 # Created by https://www.gitignore.io

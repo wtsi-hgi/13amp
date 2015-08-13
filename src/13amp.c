@@ -119,6 +119,7 @@ static void usage(void) {
 */
 static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_args* outargs) {
   cramp_fuse_conf_t* conf = (cramp_fuse_conf_t*)data;
+  (void)arg;
 
   switch(key) {
     case CRAMP_FUSE_CONF_KEY_HELP:

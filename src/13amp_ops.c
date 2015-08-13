@@ -42,6 +42,7 @@ KHASH_MAP_INIT_STR(hash_t, struct cramp_entry_t*)
 */
 void* cramp_init(struct fuse_conn_info* conn) {
   cramp_fuse_t* ctx = CTX;
+  (void)conn;
 
   /* Log configuration */
   LOG("conf.source = %s",      ctx->conf->source);
@@ -58,8 +59,6 @@ void* cramp_init(struct fuse_conn_info* conn) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
-  cramp_fuse_t* ctx = CTX;
-
   const char* srcpath = source_path(path);
   if (srcpath == NULL) {
     return -errno;
@@ -193,7 +192,7 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
-  int res;
+  int res = 0;
 
   struct cramp_filep* f = get_filep(fi);
   (void)path;
@@ -229,7 +228,7 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_release(const char* path, struct fuse_file_info* fi) {
-  int res;
+  int res = 0;
 
   struct cramp_filep* f = get_filep(fi);
   (void)path;
@@ -392,7 +391,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                 int ret;
                 khiter_t key = kh_put(hash_t, contents, bam_name, &ret);
 
-                if (key == -1) {
+                if (ret == -1) {
                   /* Key insertion failure */
                   return -errno;
                 }
@@ -461,7 +460,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
-  int res;
+  int res = 0;
 
   struct cramp_dirp* d = get_dirp(fi);
   (void)path;

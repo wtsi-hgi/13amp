@@ -1,0 +1,9 @@
+#!/bin/bash
+REPODIR=$(git rev-parse --show-toplevel)
+
+SRCDIR=$REPODIR/src
+GNULIBDIR=$REPODIR/gl
+
+# Build tags for 13amp and Gnulib sources
+# (symlink as pre-commit hook)
+ctags -R -f $SRCDIR/tags $SRCDIR $GNULIBDIR

@@ -1,3 +1,4 @@
 *
 !.gitignore
 !git-version-gen
+!tags-gen

@@ -30,7 +30,7 @@
 #define UNWRITEABLE (~(S_IWUSR | S_IWGRP | S_IWOTH))
 
 /* Check we have a file or symlink */
-#define CAN_OPEN(st_mode) (S_ISREG(st_mode) || S_ISLNK(st_mode))
+#define CAN_OPEN(st_mode) ((st_mode) & (S_IFREG | S_IFLNK))
 
 /* Initialise hash table type */
 KHASH_MAP_INIT_STR(hash_t, struct cramp_entry_t*)

@@ -64,7 +64,7 @@ static struct fuse_opt cramp_fuse_opts[] = {
   @brief  Return the FUSE version as a string (major.minor)
 
   Based on StackOverflow answer http://stackoverflow.com/a/31569176
-  FUSE PR made that introduces fuse_pkgversion for full version string
+  TODO Use my fuse_pkgversion patch once its available in FUSE releases
 */
 static char* str_fuse_version(void) {
   static char ver[5] = {0, 0, 0, 0, 0};
@@ -128,7 +128,8 @@ static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_
 
     case CRAMP_FUSE_CONF_KEY_VERSION:
       /* Show version information 
-         n.b., fuse_version() returns an integer: (maj * 10) + min */
+         n.b., fuse_version() returns an integer: (maj * 10) + min
+               TODO Use my fuse_pkgversion patch once its available   */
       (void)fprintf(stderr,
         "13 Amp %s\n"
         " * HTSLib %s\n"

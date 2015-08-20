@@ -1,6 +1,7 @@
 # 13 Amp
 
-A userspace CRAM-to-BAM translation virtual filesystem.
+A userspace CRAM-to-BAM translation virtual filesystem, which trades the
+cost of disk space for CPU, memory and time.
 
 ## Quick Build (with pkg-config)
 
@@ -24,6 +25,14 @@ A userspace CRAM-to-BAM translation virtual filesystem.
    ```
 
 5. `make install`
+
+## Etymology
+
+13 Amp uses FUSE (Filesystem in USErspace) to provide the filesystem
+layer; therein lies the obvious connection. Moreover, 13 is the ASCII
+and Unicode character code for a carriage return, or `CR`. Hence
+"cramp", an excruciating pain caused by involuntary contraction, which
+happens to contain the word "CRAM".
 
 # License
 

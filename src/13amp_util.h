@@ -10,7 +10,9 @@
 /* Needed for htsFile */
 #include <htslib/hts.h>
 
-/* XXX How come I don't need to include fuse.h for fuse_file_info? */
+/* Needed for fuse_file_info */
+#include "13amp.h"
+#include <fuse.h>
 
 /* Get FUSE context macro */
 #define CTX (cramp_fuse_t*)(fuse_get_context()->private_data)

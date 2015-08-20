@@ -37,11 +37,12 @@ typedef struct cramp_fuse_conf {
 
 /**
   @brief  13 Amp global context
-  @var    conf  Pointer to configuration
-  ...
+  @var    conf        Pointer to configuration
+  @var    mtx_stdout  Mutex lock for stdout
 */
 typedef struct cramp_fuse {
   cramp_fuse_conf_t* conf;
+  pthread_mutex_t    mtx_stdout;
 } cramp_fuse_t;
 
 #endif

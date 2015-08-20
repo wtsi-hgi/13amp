@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,6 +50,9 @@ void* cramp_init(struct fuse_conn_info* conn) {
   LOG("conf.debug_level = %d", ctx->conf->debug_level);
   LOG("conf.one_thread = %s",  ctx->conf->one_thread ? "true" : "false");
 
+  /* Initialise mutexes */
+  (void)pthread_mutex_init(&(ctx->mtx_stdout), NULL);
+
   return ctx;
 }
 
@@ -78,16 +82,15 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
       /* Inherit stat from CRAM file */
       /* n.b., stat, rather than lstat, to follow symlinks */
       int res = stat(cram_name, stbuf);
-      free((void*)cram_name);
 
       if (res == -1 || !CAN_OPEN(stbuf->st_mode)) {
         /* ...guess not */
         return -errsav;
       }
 
-      /* Virtual BAM files should have non-zero size */
-      /* FIXME What should this be? */
-      stbuf->st_size = 1;
+      /* Get virtual BAM file size */
+      stbuf->st_size = cramp_conv_size(cram_name);
+      free((void*)cram_name);
 
     } else {
       return -errsav;
@@ -200,13 +203,15 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
   if (f) {
     switch (f->type) {
       case fd_normal:
+        /* FIXME I don't know what's happened, but all of a sudden pread
+           is just filling the buffer with zeros (??)                 */
         if (pread(f->filep, buf, size, offset) == -1) {
           res = -errno;
         }
         break;
 
       case fd_cram:
-        if (cram2bam(f->cramp, buf, size, offset) == -1) {
+        if (cramp_conv_read(f->cramp, buf, size, offset) == -1) {
           res = -errno;
         }
         break;
@@ -381,7 +386,6 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
             free((void*)fullpath);
             if (srcpath) {
               int res = is_cram(srcpath);
-              free((void*)srcpath);
 
               if (res < 0) {
                 return res;
@@ -406,13 +410,13 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                 details->st = calloc(1, sizeof(struct stat));
                 memcpy(details->st, st, sizeof(struct stat));
 
-                /* Virtual BAM files should have non-zero size */
-                /* FIXME What should this be? */
-                details->st->st_size = 1;
+                /* Get virtual BAM file size */
+                details->st->st_size = cramp_conv_size(srcpath);
 
                 /* Insert virtual entry */
                 kh_value(contents, key) = details;
               }
+              free((void*)srcpath);
             } else {
               return -errno;
             } 
@@ -480,4 +484,5 @@ int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
 void cramp_destroy(void* data) {
   cramp_fuse_t* ctx = (cramp_fuse_t*)data;
   free(ctx->conf->source);
+  (void)pthread_mutex_destroy(&(ctx->mtx_stdout));
 }

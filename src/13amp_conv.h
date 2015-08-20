@@ -4,6 +4,7 @@
 #ifndef CRAMP_CONV_H
 #define CRAMP_CONV_H
 
-extern int cram2bam(htsFile*, char*, size_t, off_t);
+extern off_t   cramp_conv_size(const char*);
+extern ssize_t cramp_conv_read(htsFile*, char*, size_t, off_t);
 
 #endif

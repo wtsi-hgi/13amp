@@ -1,0 +1,5 @@
+The idea of a CRAM-to-BAM conversion filesystem was conceived within the
+Human Genetics Informatics department, at the Wellcome Trust Sanger
+Institute, in early 2015 by Joshua Randall. The implementation and
+development of 13 Amp was taken on by Christopher Harrison, also a
+member of HGI, later that year.

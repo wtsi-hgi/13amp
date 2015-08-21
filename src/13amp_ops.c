@@ -188,7 +188,7 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
   @param   size    Data size (bytes)
   @param   offset  Data offset (bytes)
   @param   fi      FUSE file info
-  @return  Exit status (0 = OK; -errno = not so much)
+  @return  Exit status (Success: number of bytes read; Fail: -errno)
 */
 int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
   int res = 0;

@@ -10,12 +10,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "13amp.h"
 #include "13amp_log.h"
-#include "13amp_util.h"
 
-#include <fuse.h>
-
+#include <htslib/hfile.h>
+#include <htslib/bgzf.h>
 #include <htslib/hts.h>
 #include <htslib/sam.h>
 
@@ -29,22 +27,25 @@
   hts_open, however, takes a string parameter for its file reference
   (i.e., file name), accepting `-` for `stdout`. We want to spool the
   converted data directly into memory, so our "trick" (hack) is to
-  create a pipe and redirect `stdout` down the write end, while another
-  thread is `read`ing the read end. (We use threads, instead of `fork`,
-  to reduce overhead.)
+  create a pipe and change the output BAM's file descriptor to the write
+  end, while another thread is `read`ing the read end. (We use threads,
+  instead of `fork`, to reduce overhead.)
 
-  Redirecting `stdout` using `dup2` is not thread safe! We have
-  instigated a mutex to at least lock all our write calls, but obviously
-  nothing else (e.g., FUSE, HTSLib, etc.) will respect that. Ultimately,
-  we need to write the conversion to memory directly, rather than using
-  this pipe hack. That will involve some HTSLib trickery. Then we can
-  also investigate proper random access.
-
-  On that last note, we are currently doing linear seeking from the
-  start of the file. This is hopelessly inefficient, but it proves the
-  concept! The difficulty of random access will be mapping the seek
-  offset from the BAM to the CRAM; it will be far from linear...
+  We are currently doing linear seeking from the start of the file. This
+  is hopelessly inefficient, but it proves the concept! The difficulty
+  of random access will be mapping the seek offset from the BAM to the
+  CRAM; it will be far from linear...
 */
+
+/**
+  @brief   This is lifted from HTSLib, so we can manipulate the file
+           descriptor of the output BAM
+*/
+struct hFILE_fd {
+  hFILE base;
+  int   fd;
+  int   is_socket:1;
+};
 
 /**
   @brief   Argument structure to pass into conversion function
@@ -94,18 +95,15 @@ struct read_args {
   @return  Exit status (NULL = OK)
 */
 void* convert(void* argv) {
-  cramp_fuse_t* ctx = CTX;
   struct conv_args* args = (struct conv_args*)argv;
-
-  /* Redirect stdout to pipe and lock mutex */
-  /* FIXME Access to ctx->whatever, including the mutex, segfaults */
-  /* (void)pthread_mutex_lock(&(ctx->mtx_stdout)); */
-  int saved_stdout = dup(STDOUT_FILENO);
-  (void)dup2(args->pipe_fd, STDOUT_FILENO);
 
   /* Initialise output BAM */
   bam1_t*  bam    = bam_init1();
   htsFile* output = hts_open("-", "wb");
+
+  /* Change file descriptor of output BAM to pipe */
+  struct hFILE_fd* fp = (struct hFILE_fd*)(output->fp.bgzf->fp);
+  fp->fd = args->pipe_fd;
 
   /* Write header */
   bam_hdr_t* header = sam_hdr_read(args->cramp);
@@ -118,13 +116,6 @@ void* convert(void* argv) {
 
   hts_close(output);
   bam_destroy1(bam);
-  close(args->pipe_fd);
-
-  /* Restore stdout and unlock mutex */
-  (void)dup2(saved_stdout, STDOUT_FILENO);
-  (void)close(saved_stdout);
-  /* FIXME Access to ctx->whatever, including the mutex, segfaults */
-  /* (void)pthread_mutex_unlock(&(ctx->mtx_stdout)); */
 
   pthread_exit(NULL);
 }

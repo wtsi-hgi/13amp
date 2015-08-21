@@ -9,7 +9,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,9 +48,6 @@ void* cramp_init(struct fuse_conn_info* conn) {
   LOG("conf.source = %s",      ctx->conf->source);
   LOG("conf.debug_level = %d", ctx->conf->debug_level);
   LOG("conf.one_thread = %s",  ctx->conf->one_thread ? "true" : "false");
-
-  /* Initialise mutexes */
-  (void)pthread_mutex_init(&(ctx->mtx_stdout), NULL);
 
   return ctx;
 }
@@ -484,5 +480,4 @@ int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
 void cramp_destroy(void* data) {
   cramp_fuse_t* ctx = (cramp_fuse_t*)data;
   free(ctx->conf->source);
-  (void)pthread_mutex_destroy(&(ctx->mtx_stdout));
 }

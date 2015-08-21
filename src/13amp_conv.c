@@ -12,8 +12,8 @@
 
 #include "13amp_log.h"
 
-#include <htslib/hfile.h>
 #include <htslib/bgzf.h>
+#include <htslib/hfile.h>
 #include <htslib/hts.h>
 #include <htslib/sam.h>
 
@@ -157,7 +157,6 @@ void* trans_read(void* argv) {
      output buffer while updating the buffer size (modulo EOF)        */
 
   targs->size = -1;
-  errno = ENOSYS;
 
   pthread_exit(NULL);
 }
@@ -261,5 +260,6 @@ off_t cramp_conv_size(const char* path) {
 ssize_t cramp_conv_read(htsFile* cramp, char* buf, size_t size, off_t offset) {
   struct read_args data = { offset, size, buf, 0 };
   (void)conv_pipe(cramp, trans_read, (void*)&data);
+  errno = ENOSYS;
   return data.size;
 }

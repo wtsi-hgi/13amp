@@ -38,8 +38,22 @@
 */
 
 /**
+  @brief   File block mapping
+  @var     start  Start of block
+  @var     len    Length of block
+*/
+typedef struct block {
+  off_t   start;
+  ssize_t len;
+} block_t;
+
+#define END_OF(x) ((x).start + (x).len)
+
+/**
   @brief   This is lifted from HTSLib, so we can manipulate the file
            descriptor of the output BAM
+
+  WARNING  This needs to be kept in step with HTSLib (see hfile.c)
 */
 struct hFILE_fd {
   hFILE base;
@@ -147,16 +161,58 @@ void* trans_size(void* argv) {
   @brief   Consume a particular chunk of data from a pipe
   @param   argv  Pointer to argument structure
   @return  Exit status (NULL = OK)
+
+    0                    N
+    |____________________|         The data is read into chunks of
+             ...                   length at most N, until EOF, where
+    iN     from          (i+1)N    the data from the previous chunk is
+    |______XXXXXXXXXXXXXX|         overwritten. We want a subset of the
+                                   data, at `from` bytes of length
+    (i+1)N               (i+2)N    `bytes` (modulo EOF), to be copied
+    |XXXXXXXXXXXXXXXXXXXX|         into our output buffer.
+             ...
+    kN       from+bytes  (k+1)N
+    |XXXXXXXXX___________|
+             ...
+    jN           EOF
+    |____________|
+
 */
 void* trans_read(void* argv) {
   struct trans_args* args = (struct trans_args*)argv;
   struct read_args* targs = (struct read_args*)(args->args);
 
-  /* TODO Read from the pipe into a circular buffer until reaching the 
-     specified offset, then read the specified amount of data into the
-     output buffer while updating the buffer size (modulo EOF)        */
+  block_t chunk   = { 0, 0 };
+  block_t wanted  = { targs->from, targs->bytes };
+  block_t to_copy = { 0, 0 };
 
-  targs->size = -1;
+  char* buf  = targs->buffer;
+  char* data = malloc(PIPE_BUF);
+
+  while ((chunk.len = read(args->pipe_fd, data, PIPE_BUF)) > 0) {
+    if (wanted.start < END_OF(chunk) && END_OF(wanted) > chunk.start) {
+      /* FIXME */
+      /* Calculate copy region relative to chunk */
+      to_copy.start = wanted.start - chunk.start;
+      if (END_OF(wanted) < END_OF(chunk)) {
+        /* Data is completely within chunk */
+        to_copy.len = wanted.len;
+      } else {
+        /* Data to end of chunk */
+        to_copy.len = END_OF(chunk) - to_copy.start;
+      }
+
+      memcpy((void*)(buf + targs->size),
+             (void*)(data + to_copy.start),
+             to_copy.len);
+      targs->size += to_copy.len;
+    }
+
+    chunk.start += chunk.len;
+  }
+
+  close(args->pipe_fd);
+  free(data);
 
   pthread_exit(NULL);
 }
@@ -252,7 +308,9 @@ off_t cramp_conv_size(const char* path) {
   @param   offset  Data offset (bytes)
   @return  Exit status (Success: number of bytes read; Fail: -1)
   
-  TODO Set errno like pread
+  TODO Set errno like pread. Note that errno is thread-local, so
+  ultimately we'll have to pass it around to get it back to the FUSE
+  operations (the same goes for cramp_conv_size).
 
   TODO This performs a linear read, with no caching, so is hopelessly
   inefficient. At this point, it's just to prove the concept works!

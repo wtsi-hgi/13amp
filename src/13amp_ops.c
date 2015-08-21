@@ -199,15 +199,13 @@ int cramp_read(const char* path, char* buf, size_t size, off_t offset, struct fu
   if (f) {
     switch (f->type) {
       case fd_normal:
-        /* FIXME I don't know what's happened, but all of a sudden pread
-           is just filling the buffer with zeros (??)                 */
-        if (pread(f->filep, buf, size, offset) == -1) {
+        if ((res = pread(f->filep, buf, size, offset)) == -1) {
           res = -errno;
         }
         break;
 
       case fd_cram:
-        if (cramp_conv_read(f->cramp, buf, size, offset) == -1) {
+        if ((res = cramp_conv_read(f->cramp, buf, size, offset)) == -1) {
           res = -errno;
         }
         break;

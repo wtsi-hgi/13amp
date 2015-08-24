@@ -66,7 +66,7 @@ static struct fuse_opt cramp_fuse_opts[] = {
   Based on StackOverflow answer http://stackoverflow.com/a/31569176
   TODO Use my fuse_pkgversion patch once its available in FUSE releases
 */
-static char* str_fuse_version(void) {
+static const char* fuse_pkgversion(void) {
   static char ver[5] = {0, 0, 0, 0, 0};
   
   if (ver[0] == 0) {
@@ -134,7 +134,7 @@ static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_
         "13 Amp %s\n"
         " * HTSLib %s\n"
         " * FUSE %s\n",
-      PACKAGE_VERSION, hts_version(), str_fuse_version());
+      PACKAGE_VERSION, hts_version(), fuse_pkgversion());
       exit(0);
 
     case CRAMP_FUSE_CONF_KEY_DEBUG_ME:

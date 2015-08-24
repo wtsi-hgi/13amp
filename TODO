@@ -40,9 +40,23 @@ Development Plan/Progress
   [X]  Bugs / Warnings
     [X]  Default source to pwd
     [X]  Options handling
-[ ]  CRAM-to-BAM conversion (linear seek)
-  [ ]  ...
+[X]  CRAM-to-BAM conversion (linear seek)
+  [X]  Fetch data
+  [X]  Calculate converted BAM size (see note 2)
 [ ]  Iteration/Refactor 2
+  [X]  AUTHORS
+  [ ]  Bugs
+    [ ]  Recursive mount (see note 1)
+    [X]  pread on normal files is filling the buffer with zeros ???
+    [-]  segfault when attempting to access FUSE context in threads ???
+  [ ]  Refactor
+    [ ]  Error/return checking in conversion routines
+    [ ]  ...
+  [ ]  Cache/precalculate converted BAM sizes
+    [ ]  ...
+  [ ]  Convert directly into memory (rather than pipe hack)
+    [ ]  ...
+  [ ]  ...
 [ ]  ...
 
 Notes

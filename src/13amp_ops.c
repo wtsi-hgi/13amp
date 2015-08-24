@@ -157,7 +157,6 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
 
       f->cramp = hts_open(cram_name, "r");
       int cramperr = errno;
-      free((void*)cram_name);
 
       if (f->cramp == NULL) {
         return -cramperr;
@@ -165,13 +164,14 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
         const htsFormat* format = hts_get_format(f->cramp);
         if (format->format == cram) {
           /* We've got a genuine CRAM file */
-          LOG("Opened virtual BAM file %s", path);
+          LOG("Opened virtual BAM file %s from %s", path, cram_name);
           f->type = fd_cram;
         } else {
           (void)hts_close(f->cramp);
           return -errsav;
         }
       }
+      free((void*)cram_name);
     } else {
       return -errsav;
     }

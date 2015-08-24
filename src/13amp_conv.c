@@ -191,15 +191,15 @@ void* trans_read(void* argv) {
 
   while ((chunk.len = read(args->pipe_fd, data, PIPE_BUF)) > 0) {
     if (wanted.start < END_OF(chunk) && END_OF(wanted) > chunk.start) {
-      /* FIXME */
       /* Calculate copy region relative to chunk */
       to_copy.start = wanted.start - chunk.start;
-      if (END_OF(wanted) < END_OF(chunk)) {
-        /* Data is completely within chunk */
-        to_copy.len = wanted.len;
-      } else {
-        /* Data to end of chunk */
-        to_copy.len = END_OF(chunk) - to_copy.start;
+      if (to_copy.start < 0) {
+        to_copy.start = 0;
+      }
+
+      to_copy.len = wanted.len - targs->size;
+      if (END_OF(to_copy) > chunk.len) {
+        to_copy.len = chunk.len - to_copy.start;
       }
 
       memcpy((void*)(buf + targs->size),

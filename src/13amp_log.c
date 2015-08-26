@@ -21,14 +21,6 @@
 #define FATAL_LOG   LOG_TEXT " " FATAL_TEXT DELIM_TEXT
 
 /**
-  @brief   Memory allocation failure bail out
-*/
-static void memfail(void) {
-  (void)fprintf(stderr, "%sMemory allocation failure\n", FATAL_LOG);
-  exit(errno);
-}
-
-/**
   @brief   Construct log format string
   @param   format  Format string
   @param   fatal   Fatal flag (0 = False; 1 = True)
@@ -40,7 +32,7 @@ static const char* logfmt(const char* format, int fatal) {
 
   size_t fmtlen = strlen(format);
   size_t len = loglen[fatal] + fmtlen;
-  const char* output = malloc((len + 2) * sizeof(char));
+  const char* output = malloc(len + 2);
   if (output) {
     memcpy((void*)output, logtxt[fatal], loglen[fatal]);
     memcpy((void*)(output + loglen[fatal]), format, fmtlen);
@@ -75,7 +67,8 @@ void cramp_log(int fatal, const char* format, ...) {
 
   const char* fmt = logfmt(format, fatal);
   if (fmt == NULL) {
-    memfail();
+    (void)fprintf(stderr, "%sMemory allocation failure\n", FATAL_LOG);
+    exit(errno);
   }
 
   /* Extract the data to output */

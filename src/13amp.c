@@ -111,11 +111,13 @@ static void usage(void) {
 
 /**
   @brief   Parse and set extra-FUSE options
-  @param   data     ...
-  @param   arg      ...
-  @param   key      ...
-  @param   outargs  ...
-  @return  ...
+  @param   data     Configuration data
+  @param   arg      Argument to parse
+  @param   key      Processing key
+  @param   outargs  Current argument list
+  @return  1 = Keep argument; 0 = Discard argument; -1 = Error
+
+  See documentation for fuse_opt_proc_t (include/fuse_opt.h) for details
 */
 static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_args* outargs) {
   cramp_fuse_conf_t* conf = (cramp_fuse_conf_t*)data;

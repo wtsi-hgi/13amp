@@ -138,6 +138,7 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
 
   struct cramp_filep* f = malloc(sizeof(struct cramp_filep));
   if (f == NULL) {
+    free((void*)srcpath);
     return -errno;
   }
 
@@ -151,7 +152,9 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
     if (errsav == ENOENT && has_extension(srcpath, ".bam")) {
       /* It looks like we might have a virtual BAM file */
       const char* cram_name = sub_extension(srcpath, ".cram");
+      free((void*)srcpath);
       if (cram_name == NULL) {
+        free((void*)f);
         return -errno;
       }
 
@@ -159,6 +162,8 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
       int cramperr = errno;
 
       if (f->cramp == NULL) {
+        free((void*)cram_name);
+        free((void*)f);
         return -cramperr;
       } else {
         const htsFormat* format = hts_get_format(f->cramp);
@@ -168,13 +173,19 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
           f->type = fd_cram;
         } else {
           (void)hts_close(f->cramp);
+          free((void*)cram_name);
+          free((void*)f);
           return -errsav;
         }
       }
       free((void*)cram_name);
     } else {
+      free((void*)srcpath);
+      free((void*)f);
       return -errsav;
     }
+  } else {
+    free((void*)srcpath);
   }
 
   fi->fh = (unsigned long)f;
@@ -340,6 +351,8 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
     if (key != kh_end(contents)) {
       const char* clash_key = kh_key(contents, key);
       struct cramp_entry_t* clash_details = kh_value(contents, key);
+      /* FIXME: Does kh_del free the key memory? I'm getting a double
+         free warning from static analysis on the following line */
       free((void*)clash_key);
       free((void*)clash_details->st);
       free((void*)clash_details);
@@ -350,12 +363,19 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
     int ret;
     key = kh_put(hash_t, contents, d->entry->d_name, &ret);
     if (ret == -1) {
-      return -errno;
+      int errsav = errno;
+      free((void*)st);
+      errno = errsav;
+      goto cleanup;
     }
 
     struct cramp_entry_t* details = malloc(sizeof(struct cramp_entry_t));
     if (details == NULL) {
-      return -errno;
+      int errsav = errno;
+      kh_del(hash_t, contents, key);
+      free((void*)st);
+      errno = errsav;
+      goto cleanup;
     }
 
     details->virtual = 0;
@@ -382,7 +402,10 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
               int res = is_cram(srcpath);
 
               if (res < 0) {
-                return res;
+                errno = -res;
+                free((void*)srcpath);
+                free((void*)bam_name);
+                goto cleanup;
               }
 
               if (res) {
@@ -391,13 +414,20 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
 
                 if (ret == -1) {
                   /* Key insertion failure */
-                  return -errno;
+                  free((void*)srcpath);
+                  free((void*)bam_name);
+                  goto cleanup;
                 }
 
                 /* Create virtual entry */
                 struct cramp_entry_t* details = malloc(sizeof(struct cramp_entry_t));
                 if (details == NULL) {
-                  return -errno;
+                  int errsav = errno;
+                  kh_del(hash_t, contents, key);
+                  free((void*)srcpath);
+                  free((void*)bam_name);
+                  errno = errsav;
+                  goto cleanup;
                 }
 
                 details->virtual = 1;
@@ -412,17 +442,19 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
               }
               free((void*)srcpath);
             } else {
-              return -errno;
+              free((void*)bam_name);
+              goto cleanup;
             } 
           } else {
-            return -errno;
+            free((void*)bam_name);
+            goto cleanup;
           }
         } else {
           /* Ignore if there's a clash */
           free((void*)bam_name);
         }
       } else {
-        return -errno;
+        goto cleanup;
       }
     }
 
@@ -449,6 +481,25 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
 
   kh_destroy(hash_t, contents);
   return 0;
+
+  cleanup: {
+    /* Clean up and destroy hash table on failure */
+    int errsav = errno;
+
+    const char* entry;
+    struct cramp_entry_t* details;
+    kh_foreach(contents, entry, details, {
+      /* Free hash table entry data */
+      if (details->virtual) {
+        free((void*)entry);
+      }
+      free((void*)details->st);
+      free((void*)details);
+    })
+    kh_destroy(hash_t, contents);
+
+    return -errsav;
+  }
 }
 
 /**

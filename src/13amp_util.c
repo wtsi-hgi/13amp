@@ -23,8 +23,8 @@
 */
 const char* path_concat(const char* path1, const char* path2) {
   /* Determine length of path1, minus trailing slashes */
-  size_t len1 = strlen(path1);
-  while (*(path1 + --len1) == '/') { continue; }
+  ssize_t len1 = (ssize_t)strlen(path1);
+  while (*(path1 + --len1) == '/') { if (len1 < 0) break; }
   ++len1;
 
   /* Find start of path2, minus initial slashes */
@@ -34,7 +34,7 @@ const char* path_concat(const char* path1, const char* path2) {
   size_t len2 = strlen(stripped);
 
   /* Allocate and construct output */
-  const char* output = malloc((len1 + len2 + 2) * sizeof(char));
+  const char* output = malloc(len1 + len2 + 2);
   if (output) {
     memcpy((void*)output, path1, len1);
     memset((void*)(output + len1), '/', 1);
@@ -89,7 +89,7 @@ const char* sub_extension(const char* path, const char* ext) {
   size_t lenext = strlen(ext);
   size_t offset = extFrom ? extFrom - path : strlen(path);
 
-  const char* output = malloc((offset + lenext + 1) * sizeof(char));
+  const char* output = malloc(offset + lenext + 1);
   if (output) {
     memcpy((void*)output, path, offset);
     memcpy((void*)(output + offset), ext, lenext + 1);

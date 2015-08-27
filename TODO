@@ -47,8 +47,9 @@ Development Plan/Progress
   [X]  AUTHORS
   [ ]  Bugs
     [ ]  Recursive mount (see note 1)
-    [X]  pread on normal files is filling the buffer with zeros ???
+    [X]  pread on normal files is filling the buffer with zeros
     [-]  segfault when attempting to access FUSE context in threads ???
+    [X]  Static and dynamic analysis
   [ ]  Refactor
     [ ]  Error/return checking in conversion routines
     [ ]  ...

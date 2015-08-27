@@ -1,9 +1,22 @@
 #!/bin/bash
 REPODIR=$(git rev-parse --show-toplevel)
-
 SRCDIR=$REPODIR/src
-GNULIBDIR=$REPODIR/gl
 
-# Build tags for 13amp and Gnulib sources
-# (symlink as pre-commit hook)
-ctags -R -f $SRCDIR/tags $SRCDIR $GNULIBDIR
+# Find the build directory
+BUILDDIR=$(find $REPODIR -name config.h -type f | xargs dirname)
+
+# Use autoconf to generate appropriate ctags
+pushd $BUILDDIR &>/dev/null
+echo "Building tags..."
+make ctags &>/dev/null
+popd &>/dev/null
+
+# Concatenate the generated tag files, strip the
+# header, sort, re-header and write the output
+find $BUILDDIR -name tags -type f \
+ | xargs cat \
+ | sed '/^!_/d' \
+ | sort \
+ | sed -e '1i\'$'\n''!_TAG_FILE_SORTED 1' \
+ | sed -e '1i\'$'\n''!_TAG_FILE_FORMAT 2' \
+ > $SRCDIR/tags

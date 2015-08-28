@@ -1,7 +1,7 @@
 # 13 Amp
 
 A userspace CRAM-to-BAM translation virtual filesystem, which trades the
-cost of disk space for CPU, memory and time.
+cost of disk space for CPU, memory and time (*so much* time!).
 
 ## Quick Build (with pkg-config)
 

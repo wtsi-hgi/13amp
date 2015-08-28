@@ -206,6 +206,11 @@ void* trans_read(void* argv) {
              (void*)(data + to_copy.start),
              to_copy.len);
       targs->size += to_copy.len;
+    
+      /* Break the loop if we've read what we need */
+      if (targs->size == wanted.len) {
+        break;
+      }
     }
 
     chunk.start += chunk.len;

@@ -82,13 +82,20 @@ $CRAMP $MNTDIR -S $SRCDIR
 # FIXME Wait for mount
 sleep 1
 
+# Unmount and clean up on exit
+function cleanup {
+  echo "Unmounting and cleaning up"
+  umount $MNTDIR
+  rm -rf $MNTDIR $CHKDIR
+}
+trap cleanup EXIT
+
 # Check the two directories contain the same files
 echo "Checking directory contents"
 DIR_DIFF=$(diff -r $MNTDIR $CHKDIR || true)
 if [ -n "$DIR_DIFF" ]; then
   stderr "Directory contents differ:"
   stderr "$DIR_DIFF"
-  umount $MNTDIR
   exit 1
 fi
 
@@ -99,18 +106,13 @@ for FILE in $(find -L $MNTDIR -type f); do
   FILE_DIFF=$(cmp $FILE $CHECK || true)
   if [ -n "$FILE_DIFF" ]; then
     stderr "$FILE_DIFF"
-    umount $MNTDIR
     exit 1
   fi
 done
 
+# We're good :)
 TICK="\xe2\x9c\x93"
 ANSI="\033["
 GREEN="${ANSI}0;32m"
 RESET="${ANSI}0m"
 echo -e "All tests passed $GREEN$TICK$RESET"
-
-# Clean up
-echo "Unmounting and cleaning up"
-umount $MNTDIR
-rm -rf $MNTDIR $CHKDIR

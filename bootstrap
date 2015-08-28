@@ -1,6 +1,6 @@
 #! /bin/sh
 # Print a version string.
-scriptversion=2013-01-20.16; # UTC
+scriptversion=2015-08-28.14; # UTC
 
 # Bootstrap this package from checked-out sources.
 
@@ -909,7 +909,6 @@ AUTOPOINT=true LIBTOOLIZE=true $AUTORECONF $AUTORECONFFLAGS \
 # Get some extra files from gnulib, overriding existing files.
 for file in $gnulib_extra_files; do
   case $file in
-  */INSTALL) dst=INSTALL;;
   build-aux/*) dst=$build_aux/${file#build-aux/};;
   *) dst=$file;;
   esac

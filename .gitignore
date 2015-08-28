@@ -3,6 +3,16 @@ build
 .syntastic_c_config
 tags
 
+/doc
+build-aux/.gitignore
+build-aux/compile
+build-aux/depcomp
+build-aux/mdate-sh
+build-aux/missing
+build-aux/snippet/
+build-aux/tap-driver.sh
+build-aux/test-driver
+build-aux/texinfo.tex
 
 # Created by https://www.gitignore.io
 

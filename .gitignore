@@ -9,6 +9,10 @@ build-aux/*
 !build-aux/git-version-gen
 !build-aux/tags-gen
 
+# Testing working directories
+test/mount
+test/check
+
 # Created by https://www.gitignore.io
 
 ### OSX ###

@@ -3,6 +3,11 @@ build
 .syntastic_c_config
 tags
 
+# Auxiliary autotools stuff
+doc
+build-aux/*
+!build-aux/git-version-gen
+!build-aux/tags-gen
 
 # Created by https://www.gitignore.io
 

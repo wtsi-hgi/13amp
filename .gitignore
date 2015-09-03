@@ -4,7 +4,6 @@ build
 tags
 
 # Auxiliary autotools stuff
-doc
 build-aux/*
 !build-aux/git-version-gen
 !build-aux/tags-gen
@@ -13,7 +12,9 @@ build-aux/*
 test/mount
 test/check
 
-# Created by https://www.gitignore.io
+
+# Following created by https://www.gitignore.io
+# (This should really be in the local/system .gitignore)
 
 ### OSX ###
 .DS_Store

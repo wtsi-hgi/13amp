@@ -11,12 +11,14 @@ echo "Building tags..."
 make ctags &>/dev/null
 popd &>/dev/null
 
-# Concatenate the generated tag files, strip the
-# header, sort, re-header and write the output
+# sed insert, with weird delimiter
+INSERT=$'i\\\n'
+
+# Concatenate the generated tag files, sort, fix the headers and output
 find $BUILDDIR -name tags -type f \
  | xargs cat \
- | sed '/^!_/d' \
  | sort \
- | sed -e '1i\'$'\n''!_TAG_FILE_SORTED 1' \
- | sed -e '1i\'$'\n''!_TAG_FILE_FORMAT 2' \
+ | sed -e "1$INSERT!_TAG_FILE_SORTED 1" \
+       -e "1$INSERT!_TAG_FILE_FORMAT 2" \
+       -e "/^!_/d" \
  > $SRCDIR/tags

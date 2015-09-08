@@ -13,9 +13,9 @@
 #include "canonicalize.h"
 #include "xgetcwd.h"
 
-#include "13amp.h"
-#include "13amp_ops.h"
-#include "13amp_log.h"
+#include "main.h"
+#include "fs.h"
+#include "log.h"
 
 #include <fuse.h>
 #include <fuse_opt.h>
@@ -94,9 +94,9 @@ static void usage(void) {
     "Usage: %s mountpoint [options]\n"
     "\n"
     "Options:\n"
-    "  -S   --source   [DIR | URL]  Source directory (defaults to the PWD)\n"
-    "  -V   --version               Print version\n"
-    "  -h   --help                  This helpful text\n"
+    "  -S   --source=DIR|URL   Source directory (defaults to the PWD)\n"
+    "  -V   --version          Print version\n"
+    "  -h   --help             This helpful text\n"
     "\n"
     "The source directory may also be provided as a mount option (e.g., in\n"
     "your fstab). When pointing to a URL, this is expected to resolve to a\n"

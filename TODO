@@ -50,10 +50,14 @@ Development Plan/Progress
     [X]  pread on normal files is filling the buffer with zeros
     [-]  segfault when attempting to access FUSE context in threads ???
     [X]  Static and dynamic analysis
-  [ ]  Refactor
-    [ ]  Error/return checking in conversion routines
-    [ ]  ...
   [ ]  Cache/precalculate converted BAM sizes
+    [ ]  FIFO initially, then regular file when filesize calculated
+    [ ]  Cache filesize and mtime (etc.) to disk, by path
+      [ ]  etc. => BAM index and mapping placeholders
+    [ ]  ...
+  [ ]  Refactor
+    [ ]  Stream file in one swoop, rather than constantly restarting
+    [ ]  Error/return checking in conversion routines
     [ ]  ...
   [ ]  Convert directly into memory (rather than pipe hack)
     [ ]  ...

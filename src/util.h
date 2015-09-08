@@ -1,8 +1,8 @@
 /* GPLv3 or later
  * Copyright (c) 2015 Genome Research Limited */
 
-#ifndef CRAMP_UTIL_H
-#define CRAMP_UTIL_H
+#ifndef _CRAMP_UTIL_H
+#define _CRAMP_UTIL_H
 
 /* Needed for DIR */
 #include <dirent.h>
@@ -11,7 +11,7 @@
 #include <htslib/hts.h>
 
 /* Needed for fuse_file_info */
-#include "13amp.h"
+#include "main.h"
 #include <fuse.h>
 
 /* Get FUSE context macro */

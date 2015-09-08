@@ -1,8 +1,8 @@
 /* GPLv3 or later
  * Copyright (c) 2015 Genome Research Limited */
 
-#ifndef CRAMP_H
-#define CRAMP_H
+#ifndef _CRAMP_H
+#define _CRAMP_H
 
 /* Needed for offsetof */
 #include <stddef.h>

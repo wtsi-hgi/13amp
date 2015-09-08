@@ -5,11 +5,11 @@
 
 #include <dirent.h>
 #include <errno.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "13amp.h"
-#include "13amp_util.h"
+#include "main.h"
+#include "util.h"
 
 #include <fuse.h>
 

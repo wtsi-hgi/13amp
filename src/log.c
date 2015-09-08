@@ -9,9 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "13amp.h"
-#include "13amp_log.h"
-#include "13amp_util.h"
+#include "main.h"
+#include "log.h"
+#include "util.h"
 
 /* Logging output */
 #define LOG_TEXT    "13 Amp"

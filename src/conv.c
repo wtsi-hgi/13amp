@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "13amp_log.h"
+#include "log.h"
 
 #include <htslib/bgzf.h>
 #include <htslib/hfile.h>

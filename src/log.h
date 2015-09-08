@@ -1,8 +1,8 @@
 /* GPLv3 or later
  * Copyright (c) 2015 Genome Research Limited */
 
-#ifndef CRAMP_LOG_H
-#define CRAMP_LOG_H
+#ifndef _CRAMP_LOG_H
+#define _CRAMP_LOG_H
 
 /* Debug level flags (additive) */
 #define DEBUG_FUSE (1 << 0)

@@ -16,10 +16,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "13amp.h"
-#include "13amp_log.h"
-#include "13amp_util.h"
-#include "13amp_conv.h"
+#include "main.h"
+#include "log.h"
+#include "util.h"
+#include "conv.h"
 
 #include <fuse.h>
 
@@ -59,6 +59,8 @@ void* cramp_init(struct fuse_conn_info* conn) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
+  cramp_fuse_t* ctx = CTX;
+
   const char* srcpath = source_path(path);
   if (srcpath == NULL) {
     return -errno;
@@ -78,6 +80,7 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
       /* Inherit stat from CRAM file */
       /* n.b., stat, rather than lstat, to follow symlinks */
       int res = stat(cram_name, stbuf);
+      free((void*)cram_name);
 
       if (res == -1 || !CAN_OPEN(stbuf->st_mode)) {
         /* ...guess not */
@@ -85,8 +88,8 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
       }
 
       /* Get virtual BAM file size */
-      stbuf->st_size = cramp_conv_size(cram_name);
-      free((void*)cram_name);
+      /* TODO Caching of real size, once calculated */
+      stbuf->st_size = ctx->conf->bam_size;
 
     } else {
       return -errsav;
@@ -314,6 +317,7 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
+  cramp_fuse_t* ctx = CTX;
   struct cramp_dirp* d = get_dirp(fi);
   khash_t(hash_t) *contents = kh_init(hash_t);
 
@@ -435,7 +439,8 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                 memcpy(details->st, st, sizeof(struct stat));
 
                 /* Get virtual BAM file size */
-                details->st->st_size = cramp_conv_size(srcpath);
+                /* TODO Caching of real size, once calculated */
+                details->st->st_size = ctx->conf->bam_size;
 
                 /* Insert virtual entry */
                 kh_value(contents, key) = details;

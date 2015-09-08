@@ -1,8 +1,8 @@
 /* GPLv3 or later
  * Copyright (c) 2015 Genome Research Limited */
 
-#ifndef CRAMP_OPS_H
-#define CRAMP_OPS_H
+#ifndef _CRAMP_OPS_H
+#define _CRAMP_OPS_H
 
 /* File system operations */
 extern void* cramp_init(struct fuse_conn_info*);

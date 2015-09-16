@@ -373,8 +373,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
     if (key != kh_end(contents)) {
       const char* clash_key = kh_key(contents, key);
       struct cramp_entry_t* clash_details = kh_value(contents, key);
-      /* FIXME: Does kh_del free the key memory? I'm getting a double
-         free warning from static analysis on the following line */
+
       free((void*)clash_key);
       free((void*)clash_details->st);
       free((void*)clash_details);

@@ -11,11 +11,11 @@
 #include <htslib/hts.h>
 
 /* Needed for fuse_file_info */
-#include "main.h"
+#include "13amp.h"
 #include <fuse.h>
 
 /* Get FUSE context macro */
-#define CTX (cramp_fuse_t*)(fuse_get_context()->private_data)
+#define CTX (cramp_ctx_t*)(fuse_get_context()->private_data)
 
 /**
   @brief   Directory structure

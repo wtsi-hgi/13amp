@@ -10,7 +10,10 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
-#define CRAMP_FUSE_OPT(t, p, v) { t, offsetof(cramp_fuse_conf_t, p), v }
+#define CRAMP_FUSE_OPT(t, p, v) { t, offsetof(cramp_conf_t, p), v }
+
+/* Needed for cramp_cache_t */
+#include "cache.h"
 
 /* Option keys for FUSE */
 enum {
@@ -26,21 +29,25 @@ enum {
 /**
   @brief  Runtime configuration
   @var    source       Source directory
+  @var    cache        CRAM stat cache file
   @var    debug_level  Debugging level
   @var    one_thread   Run single threaded
 */
-typedef struct cramp_fuse_conf {
-  char* source;
-  int   debug_level;
-  int   one_thread;
-} cramp_fuse_conf_t;
+typedef struct cramp_conf {
+  const char* source;
+  const char* cache;
+  int         debug_level;
+  int         one_thread;
+} cramp_conf_t;
 
 /**
   @brief  13 Amp global context
-  @var    conf        Pointer to configuration
+  @var    conf   Pointer to configuration
+  @var    cache  CRAM stat runtime cache
 */
-typedef struct cramp_fuse {
-  cramp_fuse_conf_t* conf;
-} cramp_fuse_t;
+typedef struct cramp_ctx {
+  cramp_conf_t*  conf;
+  cramp_cache_t* cache;
+} cramp_ctx_t;
 
 #endif

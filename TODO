@@ -52,8 +52,10 @@ Development Plan/Progress
     [X]  Static and dynamic analysis
   [ ]  Cache/precalculate converted BAM sizes
     [ ]  FIFO initially, then regular file when filesize calculated
-    [ ]  Cache filesize and mtime (etc.) to disk, by path
-      [ ]  etc. => BAM index and mapping placeholders
+      [X]  Set stat structure from cache
+      [ ]  FUSE operation?
+    [X]  Cache filesize and mtime (etc.) to disk, by path
+      [X]  etc. => BAM index and mapping placeholders
     [ ]  ...
   [ ]  Refactor
     [ ]  Stream file in one swoop, rather than constantly restarting

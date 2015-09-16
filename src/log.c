@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "main.h"
+#include "13amp.h"
 #include "log.h"
 #include "util.h"
 
@@ -59,7 +59,7 @@ void cramp_log(int fatal, const char* format, ...) {
     exit_code = errno ? errno : EFATAL;
   } else {
     /* Only log non-fatal messages if we have to */
-    cramp_fuse_t* ctx = CTX;
+    cramp_ctx_t* ctx = CTX;
     if (!(ctx->conf->debug_level & DEBUG_ME)) {
       return;
     }

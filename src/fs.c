@@ -16,10 +16,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "main.h"
+#include "13amp.h"
 #include "log.h"
 #include "util.h"
 #include "conv.h"
+#include "cache.h"
 
 #include <fuse.h>
 
@@ -41,13 +42,20 @@ KHASH_MAP_INIT_STR(hash_t, struct cramp_entry_t*)
   @return  Pointer to FUSE global context
 */
 void* cramp_init(struct fuse_conn_info* conn) {
-  cramp_fuse_t* ctx = CTX;
+  cramp_ctx_t* ctx = CTX;
   (void)conn;
 
   /* Log configuration */
   LOG("conf.source = %s",      ctx->conf->source);
+  LOG("conf.cache = %s",       ctx->conf->cache);
   LOG("conf.debug_level = %d", ctx->conf->debug_level);
   LOG("conf.one_thread = %s",  ctx->conf->one_thread ? "true" : "false");
+
+  /* Load cache */
+  if (cramp_cache_read(ctx->conf->cache, ctx->cache) == -1) {
+    /* An inability to read the cache file isn't a fatal error */
+    LOG("Couldn't read cache file \"%s\"", ctx->conf->cache); 
+  }
 
   return ctx;
 }
@@ -59,7 +67,7 @@ void* cramp_init(struct fuse_conn_info* conn) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_getattr(const char* path, struct stat* stbuf) {
-  cramp_fuse_t* ctx = CTX;
+  cramp_ctx_t* ctx = CTX;
 
   const char* srcpath = source_path(path);
   if (srcpath == NULL) {
@@ -74,24 +82,28 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
       /* It looks like we might have a virtual BAM file */
       const char* cram_name = sub_extension(srcpath, ".cram");
       if (cram_name == NULL) {
-        return -errno;
+        errsav = errno;
+        free((void*)srcpath);
+        return -errsav;
       }
 
       /* Inherit stat from CRAM file */
       /* n.b., stat, rather than lstat, to follow symlinks */
       int res = stat(cram_name, stbuf);
-      free((void*)cram_name);
 
       if (res == -1 || !CAN_OPEN(stbuf->st_mode)) {
         /* ...guess not */
+        free((void*)srcpath);
+        free((void*)cram_name);
         return -errsav;
       }
 
-      /* Get virtual BAM file size */
-      /* TODO Caching of real size, once calculated */
-      stbuf->st_size = ctx->conf->bam_size;
+      /* Set virtual BAM file size and set file type (regular/FIFO) */
+      (void)cramp_cache_stat(stbuf, cramp_cache_get(ctx->cache, cram_name));
+      free((void*)cram_name);
 
     } else {
+      free((void*)srcpath);
       return -errsav;
     }
   }
@@ -120,7 +132,9 @@ int cramp_readlink(const char* path, char* buf, size_t size) {
   memset(buf, 0, size);
   res = readlink(srcpath, buf, size);
   if (res == -1) {
-    return -errno;
+    int errsav = errno;
+    free((void*)srcpath);
+    return -errsav;
   }
 
   free((void*)srcpath);
@@ -157,8 +171,9 @@ int cramp_open(const char* path, struct fuse_file_info* fi) {
       const char* cram_name = sub_extension(srcpath, ".cram");
       free((void*)srcpath);
       if (cram_name == NULL) {
+        int errsav = errno;
         free((void*)f);
-        return -errno;
+        return -errsav;
       }
 
       f->cramp = hts_open(cram_name, "r");
@@ -289,14 +304,17 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
 
   struct cramp_dirp* d = malloc(sizeof(struct cramp_dirp));
   if (d == NULL) {
-    return -errno;
+    res = errno;
+    free((void*)srcpath);
+    return -res;
   }
 
   d->dp = opendir(srcpath);
   if (d->dp == NULL) {
-    res = -errno;
-    free(d);
-    return res;
+    res = errno;
+    free((void*)srcpath);
+    free((void*)d);
+    return -res;
   }
 
   d->offset = 0;
@@ -317,7 +335,7 @@ int cramp_opendir(const char* path, struct fuse_file_info* fi) {
   @return  Exit status (0 = OK; -errno = not so much)
 */
 int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
-  cramp_fuse_t* ctx = CTX;
+  cramp_ctx_t* ctx = CTX;
   struct cramp_dirp* d = get_dirp(fi);
   khash_t(hash_t) *contents = kh_init(hash_t);
 
@@ -370,7 +388,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
       int errsav = errno;
       free((void*)st);
       errno = errsav;
-      goto cleanup;
+      goto finish_up;
     }
 
     struct cramp_entry_t* details = malloc(sizeof(struct cramp_entry_t));
@@ -379,7 +397,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
       kh_del(hash_t, contents, key);
       free((void*)st);
       errno = errsav;
-      goto cleanup;
+      goto finish_up;
     }
 
     details->virtual = 0;
@@ -409,7 +427,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                 errno = -res;
                 free((void*)srcpath);
                 free((void*)bam_name);
-                goto cleanup;
+                goto finish_up;
               }
 
               if (res) {
@@ -420,7 +438,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                   /* Key insertion failure */
                   free((void*)srcpath);
                   free((void*)bam_name);
-                  goto cleanup;
+                  goto finish_up;
                 }
 
                 /* Create virtual entry */
@@ -431,16 +449,15 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                   free((void*)srcpath);
                   free((void*)bam_name);
                   errno = errsav;
-                  goto cleanup;
+                  goto finish_up;
                 }
 
                 details->virtual = 1;
                 details->st = calloc(1, sizeof(struct stat));
                 memcpy(details->st, st, sizeof(struct stat));
 
-                /* Get virtual BAM file size */
-                /* TODO Caching of real size, once calculated */
-                details->st->st_size = ctx->conf->bam_size;
+                /* Set virtual BAM file size and set file type (regular/FIFO) */
+                (void)cramp_cache_stat(details->st, cramp_cache_get(ctx->cache, srcpath));
 
                 /* Insert virtual entry */
                 kh_value(contents, key) = details;
@@ -448,31 +465,37 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
               free((void*)srcpath);
             } else {
               free((void*)bam_name);
-              goto cleanup;
+              goto finish_up;
             } 
           } else {
             free((void*)bam_name);
-            goto cleanup;
+            goto finish_up;
           }
         } else {
           /* Ignore if there's a clash */
           free((void*)bam_name);
         }
       } else {
-        goto cleanup;
+        goto finish_up;
       }
     }
 
     d->entry = NULL;
   }
 
-  /* Iterate through hash to populate directory */
+  /* If we've got this far, then everything's good and we can generate
+     the directory entries by ensuring the error number is zero. Then,
+     or otherwise, we free memory and destroy the hash table.         */
+  errno = 0;
+
+finish_up:;
+  int errsav = errno;
+
   const char* entry;
   struct cramp_entry_t* details;
-
   kh_foreach(contents, entry, details, {
     /* Create directory entry */
-    if (filler(buf, entry, details->st, 0)) {
+    if (!errsav && filler(buf, entry, details->st, 0)) {
       break;
     }
 
@@ -483,28 +506,9 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
     free((void*)details->st);
     free((void*)details);
   })
-
   kh_destroy(hash_t, contents);
-  return 0;
 
-  cleanup: {
-    /* Clean up and destroy hash table on failure */
-    int errsav = errno;
-
-    const char* entry;
-    struct cramp_entry_t* details;
-    kh_foreach(contents, entry, details, {
-      /* Free hash table entry data */
-      if (details->virtual) {
-        free((void*)entry);
-      }
-      free((void*)details->st);
-      free((void*)details);
-    })
-    kh_destroy(hash_t, contents);
-
-    return -errsav;
-  }
+  return -errsav;
 }
 
 /**
@@ -522,7 +526,7 @@ int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
   if(closedir(d->dp) == -1) {
     res = -errno;
   }
-  free(d);
+  free((void*)d);
 
   return res;
 }
@@ -532,6 +536,13 @@ int cramp_releasedir(const char* path, struct fuse_file_info* fi) {
   @param   data  FUSE context
 */
 void cramp_destroy(void* data) {
-  cramp_fuse_t* ctx = (cramp_fuse_t*)data;
-  free(ctx->conf->source);
+  cramp_ctx_t* ctx = (cramp_ctx_t*)data;
+
+  if (cramp_cache_write(ctx->conf->cache, ctx->cache) == -1) {
+    LOG("Couldn't write to cache file \"%s\"", ctx->conf->cache);
+  }
+
+  cramp_cache_destroy(ctx->cache);
+  free((void*)ctx->conf->source);
+  free((void*)ctx->conf->cache);
 }

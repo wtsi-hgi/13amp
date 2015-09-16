@@ -13,7 +13,8 @@
 #include "canonicalize.h"
 #include "xgetcwd.h"
 
-#include "main.h"
+#include "13amp.h"
+#include "cache.h"
 #include "fs.h"
 #include "log.h"
 
@@ -42,16 +43,17 @@ static struct fuse_opt cramp_fuse_opts[] = {
   CRAMP_FUSE_OPT("--source=%s", source, 0),
   CRAMP_FUSE_OPT("source=%s",   source, 0),
 
+  CRAMP_FUSE_OPT("--cache=%s",  cache,  0),
+
   FUSE_OPT_KEY("--debug",       CRAMP_FUSE_CONF_KEY_DEBUG_ME),
 
   FUSE_OPT_KEY("-d",            CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
   FUSE_OPT_KEY("debug",         CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
 
-  FUSE_OPT_KEY("-V",            CRAMP_FUSE_CONF_KEY_VERSION),
-  FUSE_OPT_KEY("--version",     CRAMP_FUSE_CONF_KEY_VERSION),
-
   FUSE_OPT_KEY("-h",            CRAMP_FUSE_CONF_KEY_HELP),
   FUSE_OPT_KEY("--help",        CRAMP_FUSE_CONF_KEY_HELP),
+
+  FUSE_OPT_KEY("--version",     CRAMP_FUSE_CONF_KEY_VERSION),
 
   FUSE_OPT_KEY("-f",            CRAMP_FUSE_CONF_KEY_FOREGROUND),
 
@@ -64,7 +66,7 @@ static struct fuse_opt cramp_fuse_opts[] = {
   @brief  Return the FUSE version as a string (major.minor)
 
   Based on StackOverflow answer http://stackoverflow.com/a/31569176
-  TODO Use my fuse_pkgversion patch once its available in FUSE releases
+  TODO Use my fuse_pkgversion patch once it's available in FUSE releases
 */
 static const char* fuse_pkgversion(void) {
   static char ver[5] = {0, 0, 0, 0, 0};
@@ -85,18 +87,19 @@ static const char* fuse_pkgversion(void) {
 */
 static void usage(void) {
   /* Secret options!
-       -d       Full debugging messages
-       --debug  Just 13 Amp debugging messages (i.e., no FUSE)
-       -f       Run in foreground
-       -s       Run single threaded                                   */
+       --cache=%s  Alternative CRAM stat cache file
+       -d          Full debugging messages
+       --debug     Just 13 Amp debugging messages (i.e., no FUSE)
+       -f          Run in foreground
+       -s          Run single threaded                                */
 
   (void)fprintf(stderr,
-    "Usage: %s mountpoint [options]\n"
+    "Usage: %s MOUNTPOINT [OPTIONS]\n"
     "\n"
     "Options:\n"
-    "  -S   --source=DIR|URL   Source directory (defaults to the PWD)\n"
-    "  -V   --version          Print version\n"
-    "  -h   --help             This helpful text\n"
+    "  -S, --source=DIR|URL   Source directory (defaults to the CWD)\n"
+    "  -h, --help             This helpful text\n"
+    "      --version          Print version\n"
     "\n"
     "The source directory may also be provided as a mount option (e.g., in\n"
     "your fstab). When pointing to a URL, this is expected to resolve to a\n"
@@ -120,7 +123,7 @@ static void usage(void) {
   See documentation for fuse_opt_proc_t (include/fuse_opt.h) for details
 */
 static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_args* outargs) {
-  cramp_fuse_conf_t* conf = (cramp_fuse_conf_t*)data;
+  cramp_conf_t* conf = (cramp_conf_t*)data;
   (void)arg;
 
   switch(key) {
@@ -169,20 +172,21 @@ static int cramp_fuse_options(void* data, const char* arg, int key, struct fuse_
 
 int main(int argc, char** argv) {
   /* Initialise global context */
-  static cramp_fuse_t cramp_fuse;
-  memset(&cramp_fuse, 0, sizeof(cramp_fuse));
+  static cramp_ctx_t cramp_ctx;
+  memset(&cramp_ctx, 0, sizeof(cramp_ctx));
+  cramp_ctx_t* ctx = &cramp_ctx;
 
   /* Initialise settings */
-  static cramp_fuse_conf_t cramp_fuse_conf;
-  memset(&cramp_fuse_conf, 0, sizeof(cramp_fuse_conf));
-  cramp_fuse.conf = &cramp_fuse_conf;
+  static cramp_conf_t cramp_conf;
+  memset(&cramp_conf, 0, sizeof(cramp_conf));
+  ctx->conf = &cramp_conf;
 
-  /* Pointer to context */
-  cramp_fuse_t* ctx = &cramp_fuse;
+  /* Initialise CRAM stat cache */
+  ctx->cache = kh_init(stat_hash);
 
   /* Parse command line arguments via FUSE */
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
-  (void)fuse_opt_parse(&args, &cramp_fuse_conf, cramp_fuse_opts, cramp_fuse_options);
+  (void)fuse_opt_parse(&args, &cramp_conf, cramp_fuse_opts, cramp_fuse_options);
 
   /* Sanitise source directory */
   /* TODO URL-based source manifest file */
@@ -213,11 +217,19 @@ int main(int argc, char** argv) {
     }
 
     /* If we've got this far, we're good. Canonicalise */
-    char* rawsrc = ctx->conf->source;
+    const char* rawsrc = ctx->conf->source;
     ctx->conf->source = canonicalize_filename_mode(rawsrc, CAN_EXISTING);
-    free(rawsrc);
+    free((void*)rawsrc);
+  }
+
+  /* Set cache file */
+  if (ctx->conf->cache == NULL) {
+    ctx->conf->cache = cramp_cache_file(ctx->conf->source);
+    if (ctx->conf->cache == NULL) {
+      WTF("Memory allocation failure");
+    }
   }
 
   /* Let's go! */
-  return fuse_main(args.argc, args.argv, &cramp_ops, &cramp_fuse);
+  return fuse_main(args.argc, args.argv, &cramp_ops, &cramp_ctx);
 }

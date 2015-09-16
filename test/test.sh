@@ -86,20 +86,18 @@ sleep 1
 function cleanup {
   echo "Unmounting and cleaning up"
   umount $MNTDIR
-  rm -rf $MNTDIR $CHKDIR $TESTDIR/*.dir
+  rm -rf $MNTDIR $CHKDIR
 }
 trap cleanup EXIT
 
 # Check the two directories contain the same files
 echo "Checking directory structure"
 
-function dir {
+function contents {
   find $1 | sed "s|^$1||;/^$/d" | sort
 }
 
-dir $CHKDIR > $TESTDIR/check.dir
-dir $MNTDIR > $TESTDIR/mount.dir
-DIR_DIFF=$(diff $TESTDIR/*.dir || true)
+DIR_DIFF=$(diff <(contents $CHKDIR) <(contents $MNTDIR) || true)
 if [ -n "$DIR_DIFF" ]; then
   stderr "Directory contents differ:"
   stderr "$DIR_DIFF"

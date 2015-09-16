@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "main.h"
+#include "13amp.h"
 #include "util.h"
 
 #include <fuse.h>
@@ -53,7 +53,7 @@ const char* source_path(const char* path) {
   static const char* source = NULL;
 
   if (source == NULL) {
-    cramp_fuse_t* ctx = CTX;
+    cramp_ctx_t* ctx = CTX;
     source = ctx->conf->source;
   }
 

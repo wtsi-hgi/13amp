@@ -1,7 +1,31 @@
 # 13 Amp
 
-A userspace CRAM-to-BAM translation virtual filesystem, which trades the
-cost of disk space for CPU, memory and time...so much time!
+Keep your office or datacentre warm with this userspace CRAM-to-BAM
+translation virtual filesystem, which trades the cost of disk space for
+CPU, memory and time...so much time!
+
+## Usage
+
+    13amp MOUNTPOINT [OPTIONS]
+
+Viable options are:
+
+      -S, --source=DIR|URL   Source directory (defaults to CWD)
+      -h, --help             This helpful text
+          --version          Print version
+
+The source directory may also be provided as a mount option (e.g., in
+your fstab). When poiting to a URL, this is expected to resolve to a
+manifest file (i.e., a file of CRAM URLs).
+
+Note that the search order for CRAM reference files is:
+* Per the `REF_CACHE` environment variable;
+* Per the `REF_PATH` environment variable;
+* As specified in the CRAM's `UR` header tag.
+
+If none of the above are found, then `~/.cache` will be used. This
+directory will also be used for the CRAM stat cache, unless the
+`--cache` option or `CRAMP_CACHE` environment variable is set.
 
 ## Quick Build (with pkg-config)
 
@@ -25,6 +49,16 @@ cost of disk space for CPU, memory and time...so much time!
    ```
 
 5. `make install`
+
+### Notes for OS X
+
+13 Amp works with FUSE for OS X. However, by default, its FIFO support
+is not enabled. As such, you will need to enable this and build FUSE for
+OS X from source.
+
+The source and build instructions are available on
+[GitHub](https://github.com/osxfuse/osxfuse). To enable FIFO support,
+set `M_OSXFUSE_ENABLE_FIFOFS` to 1, in `fuse_param.h`.
 
 ## Etymology
 

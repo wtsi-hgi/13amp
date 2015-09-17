@@ -12,89 +12,10 @@ build-aux/*
 test/mount
 test/check
 
-
-# Following created by https://www.gitignore.io
-# (This should really be in the local/system .gitignore)
-
-### OSX ###
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Icon must end with two \r
-Icon
-
-
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-
-
-### Vim ###
-[._]*.s[a-w][a-z]
-[._]s[a-w][a-z]
-*.un~
-Session.vim
-.netrwhist
-*~
-
-
-### C ###
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
-*.dSYM/
-
-
 ### Autotools ###
 # http://www.gnu.org/software/automake
-
-Makefile.in
-
 # http://www.gnu.org/software/autoconf
-
+Makefile.in
 /autom4te.cache
 /aclocal.m4
 /compile
@@ -105,11 +26,9 @@ Makefile.in
 /stamp-h1
 /m4
 
-
 ### GNU Lib ###
 /gnulib
 /gl
-
 
 ### Other generated files ###
 /test/vars

@@ -13,7 +13,7 @@
 /**
   @brief   CRAM file statistics
   @var     mtime  Last modified time
-  @var     size   File size (0 => FIFO)
+  @var     size   File size
   @var     TODO   (For future use)
 */
 typedef struct cramp_stat {

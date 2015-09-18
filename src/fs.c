@@ -48,6 +48,7 @@ void* cramp_init(struct fuse_conn_info* conn) {
   /* Log configuration */
   LOG("conf.source = %s",      ctx->conf->source);
   LOG("conf.cache = %s",       ctx->conf->cache);
+  LOG("conf.bamsize = %s",     human_size(ctx->conf->bamsize));
   LOG("conf.debug_level = %d", ctx->conf->debug_level);
   LOG("conf.one_thread = %s",  ctx->conf->one_thread ? "true" : "false");
 
@@ -98,7 +99,7 @@ int cramp_getattr(const char* path, struct stat* stbuf) {
         return -errsav;
       }
 
-      /* Set virtual BAM file size and set file type (regular/FIFO) */
+      /* Set virtual BAM file size */
       (void)cramp_cache_stat(stbuf, cramp_cache_get(ctx->cache, cram_name));
       free((void*)cram_name);
 
@@ -455,7 +456,7 @@ int cramp_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t off
                 details->st = calloc(1, sizeof(struct stat));
                 memcpy(details->st, st, sizeof(struct stat));
 
-                /* Set virtual BAM file size and set file type (regular/FIFO) */
+                /* Set virtual BAM file size */
                 (void)cramp_cache_stat(details->st, cramp_cache_get(ctx->cache, srcpath));
 
                 /* Insert virtual entry */

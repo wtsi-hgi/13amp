@@ -7,6 +7,9 @@
 /* Needed for DIR */
 #include <dirent.h>
 
+/* Needed for ssize_t */
+#include <sys/types.h>
+
 /* Needed for htsFile */
 #include <htslib/hts.h>
 
@@ -63,6 +66,7 @@ struct cramp_filep {
 /* Utility functions to support file system operations */
 extern const char* path_concat(const char*, const char*);
 extern const char* source_path(const char*);
+extern const char* human_size(ssize_t);
 extern int         has_extension(const char*, const char*);
 extern const char* sub_extension(const char*, const char*);
 extern int         is_cram(const char*);

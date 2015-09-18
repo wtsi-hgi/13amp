@@ -7,6 +7,9 @@
 /* Needed for offsetof */
 #include <stddef.h>
 
+/* Needed for off_t */
+#include <sys/types.h>
+
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
@@ -38,6 +41,7 @@ typedef struct cramp_conf {
   const char* cache;
   int         debug_level;
   int         one_thread;
+  off_t       bamsize;
 } cramp_conf_t;
 
 /**

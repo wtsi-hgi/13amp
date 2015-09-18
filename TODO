@@ -51,9 +51,9 @@ Development Plan/Progress
     [-]  segfault when attempting to access FUSE context in threads ???
     [X]  Static and dynamic analysis
   [ ]  Cache/precalculate converted BAM sizes
-    [ ]  FIFO initially, then regular file when filesize calculated
+    [ ]  Max size initially, then correct when filesize calculated
       [X]  Set stat structure from cache
-      [ ]  FUSE operation?
+      [ ]  Special case when attempting to read the EOF
     [X]  Cache filesize and mtime (etc.) to disk, by path
       [X]  etc. => BAM index and mapping placeholders
     [ ]  ...
@@ -86,3 +86,11 @@ Notes
    the size is really expensive, so hopefully there is a workaround.
 
    [*] http://stackoverflow.com/a/31940722
+
+3. We are forced to set the virtual BAM file size to something
+   arbitrarily large (e.g., SSIZE_MAX), rather than first specifying the
+   file to be a FIFO and then converting to a regular file once the size
+   has been calculated. This is because, apparently[*], FUSE's read and
+   write operations only apply to regular files.
+
+   [*] http://stackoverflow.com/a/32634594

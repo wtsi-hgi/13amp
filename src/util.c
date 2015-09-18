@@ -5,8 +5,10 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include "13amp.h"
 #include "util.h"
@@ -58,6 +60,40 @@ const char* source_path(const char* path) {
   }
 
   return path_concat(source, path);
+}
+
+/**
+  @brief   Human file size
+  @param   size  File size in bytes
+  @return  Base 2 prefixed file size string
+
+  This isn't as complete as Gnulib's `human_readable`, but it does the
+  job without any allocation or messing around
+*/
+const char* human_size(ssize_t size) {
+  static char prefix[8] = {'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
+  static char output[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+  if (size < 0) {
+    (void)snprintf(output, 10, "Error");
+
+  } else {
+    double quant = (double)size;
+    ssize_t i = -1;
+
+    while (quant >= 1024.0) {
+      quant /= 1024.0;
+      ++i;
+    }
+
+    if (i < 0 || i > 7) {
+      (void)snprintf(output, sizeof(output), "%ld B", size);
+    } else {
+      (void)snprintf(output, sizeof(output), "%.1f %ciB", quant, prefix[i]);
+    }
+  }
+  
+  return output;
 }
 
 /**

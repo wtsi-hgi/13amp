@@ -4,6 +4,7 @@
 #include "config.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,25 +40,27 @@ static struct fuse_operations cramp_ops = {
 
 /* FUSE Options */
 static struct fuse_opt cramp_fuse_opts[] = {
-  CRAMP_FUSE_OPT("-S %s",       source, 0),
-  CRAMP_FUSE_OPT("--source=%s", source, 0),
-  CRAMP_FUSE_OPT("source=%s",   source, 0),
+  CRAMP_FUSE_OPT("-S %s",          source, 0),
+  CRAMP_FUSE_OPT("--source=%s",    source, 0),
+  CRAMP_FUSE_OPT("source=%s",      source, 0),
 
-  CRAMP_FUSE_OPT("--cache=%s",  cache,  0),
+  CRAMP_FUSE_OPT("--cache=%s",     cache,  0),
 
-  FUSE_OPT_KEY("--debug",       CRAMP_FUSE_CONF_KEY_DEBUG_ME),
+  CRAMP_FUSE_OPT("--bamsize=%lld", bamsize, 0),
 
-  FUSE_OPT_KEY("-d",            CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
-  FUSE_OPT_KEY("debug",         CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
+  FUSE_OPT_KEY("--debug",          CRAMP_FUSE_CONF_KEY_DEBUG_ME),
 
-  FUSE_OPT_KEY("-h",            CRAMP_FUSE_CONF_KEY_HELP),
-  FUSE_OPT_KEY("--help",        CRAMP_FUSE_CONF_KEY_HELP),
+  FUSE_OPT_KEY("-d",               CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
+  FUSE_OPT_KEY("debug",            CRAMP_FUSE_CONF_KEY_DEBUG_ALL),
 
-  FUSE_OPT_KEY("--version",     CRAMP_FUSE_CONF_KEY_VERSION),
+  FUSE_OPT_KEY("-h",               CRAMP_FUSE_CONF_KEY_HELP),
+  FUSE_OPT_KEY("--help",           CRAMP_FUSE_CONF_KEY_HELP),
 
-  FUSE_OPT_KEY("-f",            CRAMP_FUSE_CONF_KEY_FOREGROUND),
+  FUSE_OPT_KEY("--version",        CRAMP_FUSE_CONF_KEY_VERSION),
 
-  FUSE_OPT_KEY("-s",            CRAMP_FUSE_CONF_KEY_SINGLETHREAD),
+  FUSE_OPT_KEY("-f",               CRAMP_FUSE_CONF_KEY_FOREGROUND),
+
+  FUSE_OPT_KEY("-s",               CRAMP_FUSE_CONF_KEY_SINGLETHREAD),
 
   FUSE_OPT_END
 };
@@ -87,11 +90,12 @@ static const char* fuse_pkgversion(void) {
 */
 static void usage(void) {
   /* Secret options!
-       --cache=%s  Alternative CRAM stat cache file
-       -d          Full debugging messages
-       --debug     Just 13 Amp debugging messages (i.e., no FUSE)
-       -f          Run in foreground
-       -s          Run single threaded                                */
+       --cache=%s      Alternative CRAM stat cache file
+       --bamsize=%lld  Virtual BAM file's initial size
+       -d              Full debugging messages
+       --debug         Just 13 Amp debugging messages (i.e., no FUSE)
+       -f              Run in foreground
+       -s              Run (FUSE) single threaded                     */
 
   (void)fprintf(stderr,
     "Usage: %s MOUNTPOINT [OPTIONS]\n"
@@ -228,6 +232,11 @@ int main(int argc, char** argv) {
     if (ctx->conf->cache == NULL) {
       WTF("Memory allocation failure");
     }
+  }
+
+  /* Set virtual BAM fallback size */
+  if (ctx->conf->bamsize == 0) {
+    ctx->conf->bamsize = SSIZE_MAX;
   }
 
   /* Let's go! */

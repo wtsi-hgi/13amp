@@ -75,24 +75,25 @@ void cramp_cache_destroy(cramp_cache_t* cache) {
 }
 
 /**
-  @brief   Set the file size and mode based on cached value
+  @brief   Set the file size based on cached value
   @param   stbuf   Pointer to stat structure
   @param   cached  Pointer to cache stat structure
   @return  Pointer to stat structure
 
-  If uncached, zero sized, or out of date, then the size is set to 0 and
-  the type is a FIFO. Otherwise, the size is set appropriately and the
-  type is just a regular file.
+  If uncached, zero sized, or out of date, then the size is set per the
+  configuration (default SSIZE_MAX); otherwise, it is set appropriately.
 */
 struct stat* cramp_cache_stat(struct stat* stbuf, cramp_stat_t* cached) {
-  /* Clear the file type bits */
-  stbuf->st_mode &= ~S_IFMT;
+  static off_t bamsize = 0;
+
+  if (bamsize == 0) {
+   cramp_ctx_t* ctx = CTX;
+   bamsize = ctx->conf->bamsize;
+  }
 
   if (cached == NULL || cached->size == 0 || cached->mtime < stbuf->st_mtime) {
-    stbuf->st_mode |= S_IFIFO;
-    stbuf->st_size = 0;
+    stbuf->st_size = bamsize;
   } else {
-    stbuf->st_mode |= S_IFREG;
     stbuf->st_size = cached->size;
   }
   

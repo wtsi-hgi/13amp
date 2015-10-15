@@ -51,9 +51,10 @@ enum fd_type {fd_normal, fd_cram};
 
 /**
   @brief   File structure (tagged union of file/CRAM handle)
-  @var     type   Union tag
-  @var     filep  Normal file handle
-  @var     cramp  CRAM file handle for HTSLib
+  @var     type    Union tag
+  @var     filep   Normal file handle
+  @var     cramp   CRAM file handle for HTSLib
+  @var     offset  Read progress (bytes)
 */
 struct cramp_filep {
   enum fd_type type;
@@ -61,6 +62,7 @@ struct cramp_filep {
     int        filep;
     htsFile*   cramp;
   };
+  off_t        offset;
 };
 
 /* Utility functions to support file system operations */

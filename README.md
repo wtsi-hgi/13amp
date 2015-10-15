@@ -15,7 +15,7 @@ Viable options are:
         --version          Print version
 
 The source directory may also be provided as a mount option (e.g., in
-your fstab). When poiting to a URL, this is expected to resolve to a
+your fstab). When pointing to a URL, this is expected to resolve to a
 manifest file (i.e., a file of CRAM URLs).
 
 Note that the search order for CRAM reference files is:

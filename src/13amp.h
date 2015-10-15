@@ -35,6 +35,7 @@ enum {
   @var    cache        CRAM stat cache file
   @var    debug_level  Debugging level
   @var    one_thread   Run single threaded
+  @var    bamsize      Default BAM file size
 */
 typedef struct cramp_conf {
   const char* source;

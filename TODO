@@ -53,7 +53,8 @@ Development Plan/Progress
   [ ]  Cache/precalculate converted BAM sizes
     [ ]  Max size initially, then correct when filesize calculated
       [X]  Set stat structure from cache
-      [ ]  Special case when attempting to read the EOF
+      [ ]  Update cache on end of stream
+      [X]  Special case when attempting to read the EOF
     [X]  Cache filesize and mtime (etc.) to disk, by path
       [X]  etc. => BAM index and mapping placeholders
     [ ]  ...

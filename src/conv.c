@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "log.h"
+#include "util.h"
 
 #include <htslib/bgzf.h>
 #include <htslib/hfile.h>
@@ -179,6 +180,21 @@ void* trans_size(void* argv) {
 
 */
 void* trans_read(void* argv) {
+  static off_t bam_eof_offset = 0;
+  static char* bam_eof = "\037\213\010\4\0\0\0\0\0\377\6\0\102\103\2\0\033\0\3\0\0\0\0\0\0\0\0\0";
+
+  /* The virtual BAM EOF block occupies the last 28 bytes of the file.
+     When we don't know the size in advance, and a seek is done to check
+     the EOF is correct, we just return that block (which is static; see
+     above), rather than streaming it all through.
+  
+     TODO It would be good, while we're still streaming, to also have
+          this behaviour when the size *is* known.                    */
+  if (bam_eof_offset == 0) {
+    cramp_ctx_t* ctx = CTX;
+    bam_eof_offset = ctx->conf->bamsize - 28;
+  }
+
   struct trans_args* args = (struct trans_args*)argv;
   struct read_args* targs = (struct read_args*)(args->args);
 
@@ -186,38 +202,48 @@ void* trans_read(void* argv) {
   block_t wanted  = { targs->from, targs->bytes };
   block_t to_copy = { 0, 0 };
 
-  char* buf  = targs->buffer;
-  char* data = malloc(PIPE_BUF);
+  char* buf = targs->buffer;
 
-  while ((chunk.len = read(args->pipe_fd, data, PIPE_BUF)) > 0) {
-    if (wanted.start < END_OF(chunk) && END_OF(wanted) > chunk.start) {
-      /* Calculate copy region relative to chunk */
-      to_copy.start = wanted.start - chunk.start;
-      if (to_copy.start < 0) {
-        to_copy.start = 0;
+  if (wanted.start == bam_eof_offset) {
+    /* Return EOF block (or part, thereof) */
+    to_copy.len = wanted.len > 28 ? 28 : wanted.len;
+    memcpy((void*)buf, (void*)bam_eof, to_copy.len);
+    targs->size = to_copy.len;
+
+  } else {
+    /* Stream through */
+    char* data = malloc(PIPE_BUF);
+
+    while ((chunk.len = read(args->pipe_fd, data, PIPE_BUF)) > 0) {
+      if (wanted.start < END_OF(chunk) && END_OF(wanted) > chunk.start) {
+        /* Calculate copy region relative to chunk */
+        to_copy.start = wanted.start - chunk.start;
+        if (to_copy.start < 0) {
+          to_copy.start = 0;
+        }
+
+        to_copy.len = wanted.len - targs->size;
+        if (END_OF(to_copy) > chunk.len) {
+          to_copy.len = chunk.len - to_copy.start;
+        }
+
+        memcpy((void*)(buf + targs->size),
+               (void*)(data + to_copy.start),
+               to_copy.len);
+        targs->size += to_copy.len;
+      
+        /* Break the loop if we've read what we need */
+        if (targs->size == wanted.len) {
+          break;
+        }
       }
 
-      to_copy.len = wanted.len - targs->size;
-      if (END_OF(to_copy) > chunk.len) {
-        to_copy.len = chunk.len - to_copy.start;
-      }
-
-      memcpy((void*)(buf + targs->size),
-             (void*)(data + to_copy.start),
-             to_copy.len);
-      targs->size += to_copy.len;
-    
-      /* Break the loop if we've read what we need */
-      if (targs->size == wanted.len) {
-        break;
-      }
+      chunk.start += chunk.len;
     }
 
-    chunk.start += chunk.len;
+    close(args->pipe_fd);
+    free(data);
   }
-
-  close(args->pipe_fd);
-  free(data);
 
   pthread_exit(NULL);
 }
